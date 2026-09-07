@@ -21,7 +21,7 @@
 #   나는 고등학생용 물리 교재를 쓰고 있어. 아래 개요로 30쪽 분량의 본문을
 #   챕터 단위로 순서대로 이어서 생성해 줘...
 #   EOF
-#   bash overnight_gen.sh start deepseek-r1-32b /tmp/mybook_prompt.md
+#   bash overnight_gen.sh start deepseek-r1-14b /tmp/mybook_prompt.md
 #
 #   # 자고 일어나서:
 #   bash overnight_gen.sh status

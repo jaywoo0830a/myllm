@@ -9,7 +9,7 @@
 #     3) 상태/로그 확인 (KV 옵션 미지원이면 run_one.sh 가 자동 경고 후 시작)
 #
 # 사용법:
-#   bash restart.sh deepseek-r1-32b
+#   bash restart.sh deepseek-r1-14b
 #
 # 관리용 개별 명령 원하면:
 #   sudo systemctl stop myllm-llama@<slug>
@@ -19,7 +19,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SLUG="${1:?사용법: bash restart.sh <slug> (예: deepseek-r1-32b)}"
+SLUG="${1:?사용법: bash restart.sh <slug> (예: deepseek-r1-14b)}"
 
 UNIT="myllm-llama@${SLUG}.service"
 

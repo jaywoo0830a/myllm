@@ -3,14 +3,14 @@
 # download.sh <slug>
 #   지정 모델의 GGUF 를 HF 에서 다운로드 (토큰 인증·이어받기·선택 병렬).
 #
-# slug 예: deepseek-r1-32b
+# slug 예: deepseek-r1-14b
 #
 # 사용법:
-#   bash download.sh deepseek-r1-32b
+#   bash download.sh deepseek-r1-14b
 # ============================================================
 set -euo pipefail
 
-SLUG="${1:?사용법: bash download.sh <slug> (예: deepseek-r1-32b)}"
+SLUG="${1:?사용법: bash download.sh <slug> (예: deepseek-r1-14b)}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
