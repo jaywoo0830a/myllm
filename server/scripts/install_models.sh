@@ -14,7 +14,7 @@
 #   systemctl status 'myllm-llama@*'
 #   journalctl -u 'myllm-llama@deepseek-r1-32b' -f
 #   sudo systemctl restart myllm-llama@deepseek-r1-32b
-#   sudo systemctl stop myllm-llama@deepseek-1.5b
+#   sudo systemctl stop myllm-llama@deepseek-r1-32b
 # ============================================================
 set -euo pipefail
 

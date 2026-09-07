@@ -3,7 +3,7 @@
 # download.sh <slug>
 #   지정 모델의 GGUF 를 HF 에서 다운로드 (토큰 인증·이어받기·선택 병렬).
 #
-# slug 예: deepseek-1.5b, deepseek-r1-32b
+# slug 예: deepseek-r1-32b
 #
 # 사용법:
 #   bash download.sh deepseek-r1-32b

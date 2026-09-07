@@ -1,11 +1,10 @@
 # ============================================================
 # myllm-llama@.service  --  systemd template (모델 인스턴스)
-#   %i = 모델 slug (예: deepseek-1.5b, deepseek-r1-32b)
+#   %i = 모델 slug (예: deepseek-r1-32b)
 #
-#   설치: bash install_models.sh   (각 활성 slug 마다 enable + start)
+#   설치: bash install_models.sh   (활성 slug 마다 enable + start)
 #   하나씩:
 #     sudo systemctl enable --now myllm-llama@deepseek-r1-32b
-#     sudo systemctl enable --now myllm-llama@deepseek-1.5b
 #   관리:
 #     systemctl status 'myllm-llama@*'
 #     journalctl -u 'myllm-llama@deepseek-r1-32b' -f

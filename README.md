@@ -1,13 +1,12 @@
 # myllm
 
-**여러 로컬 모델**을 **별도 베어메탈 서버**(9700X · 64GB · Ubuntu)에서 `llama.cpp llama-server` 로
-OpenAI 호환 API로 동시 서빙하고, 이 저장소(=클라이언트 머신)의 **VS Code Continue.dev** 가 그 API를 원격 호출하는 구축 프로젝트.
+**DeepSeek-R1-Distill-Qwen-32B** 를 **별도 베어메탈 서버**(9700X · 64GB · Ubuntu)에서 `llama.cpp llama-server` 로
+OpenAI 호환 API로 서빙하고, 이 저장소(=클라이언트 머신)의 **VS Code Continue.dev** 가 그 API를 원격 호출하는 구축 프로젝트.
 
-현재 구성된 모델 프로파일 (`server/config/models/`):
-- **`deepseek-r1-32b`** — DeepSeek-R1-Distill-Qwen-32B (Q4_K_M, ~19.9GB) — 메인 (포트 **8081**)
-- **`deepseek-1.5b`** — DeepSeek-R1-Distill-Qwen-1.5B (Q4_K_M, ~1.0GB) — 경량 보조 (포트 **8080**)
+운영 모델 프로파일 (`server/config/models/`):
+- **`deepseek-r1-32b`** — DeepSeek-R1-Distill-Qwen-32B (Q4_K_M, ~19.9GB) — 포트 **8081** (유일 모델)
 
-> R1 distill 계열 두 모델 모두 **항상 `<think>`(reasoning) 먼저 출력**하며 억제가 불가합니다.
+> 32B 는 R1 distill = **항상 `<think>`(reasoning) 먼저 출력**하며 억제가 불가합니다.
 
 ## 구조
 
@@ -19,16 +18,16 @@ myllm/
 │   ├── config/
 │   │   ├── env.example          #   공통(base) 설정 (host/경로/token)
 │   │   └── models/              #   모델 프로파일 (slug 단위)
-│   │   ├── deepseek-r1-32b.env.example
-│   │   └── deepseek-1.5b.env.example
+│   │       └── deepseek-r1-32b.env.example
 │   ├── scripts/
 │   │   ├── lib.sh               #   공통 헬퍼 (env 로드/토큰/경로)
 │   │   ├── 01_setup_llamacpp.sh #   llama.cpp 빌드 (AVX-512, master)
 │   │   ├── 06_set_hf_token.sh   #   HF Read 토큰 저장 (gitignore)
-│   │   ├── download.sh <slug>   #   모델별 GGUF 다운로드(토큰/이어받기)
-│   │   ├── run_one.sh <slug>    #   모델별 llama-server (테스트/수동)
-│   │   ├── run_all.sh           #   모든 모델 백그라운드(테스트용)
-│   │   ├── install_models.sh    #   모델별 systemd 템플릿 등록(상시화)
+│   │   ├── download.sh <slug>   #   GGUF 다운로드(토큰/이어받기)
+│   │   ├── run_one.sh <slug>    #   llama-server (테스트/수동)
+│   │   ├── run_all.sh           #   활성 모델 백그라운드(테스트용)
+│   │   ├── install_models.sh    #   systemd 템플릿 등록(상시화)
+│   │   ├── overnight_gen.sh     #   밤샘 장문 생성(파일 저장)
 │   │   └── test_server.sh <slug>#   /v1 스모크 테스트
 │   └── systemd/myllm-llama@.service   # systemd 템플릿(@모델slug)
 └── client/                      # 클라이언트(VS Code) 설정 템플릿
@@ -36,15 +35,14 @@ myllm/
         └── config.yaml.example  #   Continue.dev ~/.continue/config.yaml 용
 ```
 
-## 연결 구조 (2 모델 병렬)
+## 연결 구조 (단일 모델)
 
 ```
 [클라이언트 머신 = 이 저장소]
   VS Code &#8594; Continue.dev
       │  OpenAI 호환 /v1
-      ├─ http://<서버IP>:8080/v1   (deepseek-1.5b, 경량 보조)
-      └─ http://<서버IP>:8081/v1   (deepseek-r1-32b, 메인)
-[베어메탈 서버] llama-server x2 (각 프로파일 1개 프로세스, CPU 스레드 분할)
+      └─ http://<서버IP>:8081/v1   (deepseek-r1-32b)
+[베어메탈 서버] llama-server x1 (deepseek-r1-32b, full 8 코어)
 ```
 
 ## 빠른 시작 (서버, 베어메탈)
@@ -55,24 +53,21 @@ git clone <repo-url> myllm && cd myllm/server
 # 1) 공통 설정 + 모델 프로파일 활성화
 cp config/env.example config/env
 cp config/models/deepseek-r1-32b.env.example config/models/deepseek-r1-32b.env
-cp config/models/deepseek-1.5b.env.example    config/models/deepseek-1.5b.env
-#    (포트/스레드/ctx 등 편집 가능)
+#    (포트/스레드/ctx/KV_CACHE 등 편집 가능)
 
 # 2) 빌드 + 토큰 + 다운로드
 bash scripts/01_setup_llamacpp.sh          # llama.cpp 빌드
 bash scripts/06_set_hf_token.sh            # (선택) HF Read 토큰
 bash scripts/download.sh deepseek-r1-32b   # ~19.9GB
-bash scripts/download.sh deepseek-1.5b     # ~1.0GB
 
-# 3) 테스트 실행 (모두 백그라운드)
+# 3) 테스트 실행 (백그라운드)
 bash scripts/run_all.sh
-bash scripts/test_server.sh deepseek-r1-32b   # pong 확인 (로드 오래 걸림)
-bash scripts/test_server.sh deepseek-1.5b
+bash scripts/test_server.sh deepseek-r1-32b   # pong 확인 (로드 수 분)
 bash scripts/run_all.sh --stop
 
 # 4) 상시화 (systemd, 재부팅 자동)
-bash scripts/install_models.sh             # config/models/*.env 전부
-sudo ufw allow 8080/tcp && sudo ufw allow 8081/tcp
+bash scripts/install_models.sh             # deepseek-r1-32b enable+start
+sudo ufw allow 8081/tcp
 hostname -I                                # 서버 IP 기록
 ```
 
@@ -81,17 +76,14 @@ hostname -I                                # 서버 IP 기록
 **클라이언트(이 머신의 VS Code)에서:**
 1. Continue 확장 설치
 2. `cp client/continue/config.yaml.example ~/.continue/config.yaml`
-3. `<서버IP>` 를 실제 IP로 교체, 각 모델 `apiBase`(포트 8080/8081) 확인.
-   모델 id 는 `curl http://<서버IP>:<포트>/v1/models` 로 확인해 `model:` 값과 일치.
-4. Continue 패널에서 메인(deepseek-r1-32b)과 보조(deepseek-1.5b)를 모델 선택해 사용
-   (둘 다 reasoning — 답변 전 `<think>`가 길게 나올 수 있음)
+3. `<서버IP>` 를 실제 IP로 교체.
+   모델 id 는 `curl http://<서버IP>:8081/v1/models` 로 확인해 `model:` 값과 일치.
+4. Continue 패널에서 deepseek-r1-32b 를 선택해 사용
+   (R1 reasoning — 답변 전 `<think>`가 길게 나올 수 있음)
 
 ## 참고
-- GPU 없이 CPU 8코어로 동시 2모델:
-  - `deepseek-r1-32b`(메인, ~19.9GB, 8스레드/포트8081) — 무거운 reasoning (단 **~2.5-4 t/s로 느림**, CoT 포함 답변에 수 분 가능)
-  - `deepseek-1.5b`(보조, ~1.0GB, 4스레드/포트8080) — 빠른 채팅
-- 8코어·대역폭 공유 → 동시 요청 시 성능 분산. `THREADS` 로 조절.
-- GGUF:
-  - `unsloth/DeepSeek-R1-Distill-Qwen-32B-GGUF` → `DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf`
-  - `unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF` → `DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf`
+- CPU 8코어 단일 모델(32B). 전 코어/대역폭 전용.
+  - `deepseek-r1-32b`(~19.9GB, 8스레드/포트8081) — reasoning 모델 (**약 ~2.5-4 t/s로 느림**, 긴 CoT 포함 시 답변에 수 분 가능)
+- GGUF: `unsloth/DeepSeek-R1-Distill-Qwen-32B-GGUF` → `DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf`
+- 속도 튜닝: `KV_CACHE=q8_0`(이미 프로파일 기본). 긴 문서는 `overnight_gen.sh` 로 백그라운드 생성.
 - 상세 모델 팩트·리스크는 `PLAN.md` 를 볼 것.
