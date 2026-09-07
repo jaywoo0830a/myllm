@@ -85,6 +85,31 @@ bash scripts/run_all.sh --status
 
 ---
 
+## 3b) 밤새 장문 생성 (백그라운드 + 파일 저장)
+
+긴 문서(교재 등)를 한 번의 응답으로 생성해 파일로 남기되, SSH 를 끊어도 계속 돌리는 헬퍼.
+
+```bash
+# 1) 지시(프롬프트)를 파일로 준비 - 길어도 됨
+cat > /tmp/prompt.md <<'EOF'
+고등학교 물리 1권 목차 요약 작성에 이어서, ~컨텍스트 한도 안의 분량까지 상세 본문을 이어 써 줘.
+EOF
+
+# 2) 백그라운드 시작 (nohup → 로그아웃해도 계속)
+bash scripts/overnight_gen.sh start deepseek-r1-32b /tmp/prompt.md
+#   -> job: server/output/deepseek-r1-32b-<시각>/ ... 에 pid/로그 기록
+
+# 3) 아침에 완료 확인
+bash scripts/overnight_gen.sh status
+bash scripts/overnight_gen.sh status server/output/deepseek-r1-32b-<시각>/
+#    완료 시 <job>/content.md 에 최종 내용
+```
+
+> ⚠️ 한 번의 요청 = 컨텍스트(여기 16384) 안의 출력까지만. 전체가 그보다 훨씬 길면 이 헬퍼 단독으론 한 조각만 생성됨(여러 번 이어 쓰려면 프롬프트를 조각별로 재구성 필요).
+> 참고: 생성 동안 그 포트(슬롯)를 점유하므로, 동시에 다른 요청을 보내면 대기할 수 있음.
+
+---
+
 ## 4) 상시 데몬화 (systemd, 재부팅 자동) + 방화벽
 
 3단계 데몬을 모두 종료한 뒤(중복 방지):

@@ -4,6 +4,8 @@ server/config/env
 server/config/models/*.env
 # HuggingFace 토큰 (비밀 - 절대 커밋 금지)
 server/config/hf_token
+# 밤새면 job/생성 결과물
+server/output/
 
 # macOS / misc
 .DS_Store
