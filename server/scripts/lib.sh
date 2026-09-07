@@ -53,6 +53,7 @@ load_model_env() {
   PARALLEL="${PARALLEL:-1}"
   BATCH="${BATCH:-512}"
   UBATCH="${UBATCH:-512}"
+  KV_CACHE="${KV_CACHE:-}"
 }
 
 # resolve_hf_token: HF_TOKEN / hf_token 파일 / ~/.cache/huggingface/token 순서

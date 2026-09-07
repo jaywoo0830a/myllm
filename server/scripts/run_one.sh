@@ -41,6 +41,19 @@ THINK_ARGS=()
 #  (참고: 옛 `--no-think` 는 최신 llama.cpp 에서 invalid arg. --reasoning [on|off|auto] 사용)
 if [[ "${NO_THINK:-0}" == "1" ]]; then THINK_ARGS+=(--reasoning off); fi
 
+# KV 캐시 양자화 (OPT: 메모리 대역폭 절약으로 디코드 t/s 개선).
+#   프로파일 KV_CACHE 값 예: "q8_0" -> "--cache-type k:q8_0,v:q8_0"
+#   값이 비어 있으면 미사용(기본 f16, flag 생략). 미지원 빌드면 빈 값으로 꺼라.
+CACHE_ARGS=()
+if [[ -n "${KV_CACHE:-}" ]]; then
+  case "$KV_CACHE" in
+    *:*) CACHE_ARG="--cache-type ${KV_CACHE}" ;;
+    *)   CACHE_ARG="--cache-type k:${KV_CACHE},v:${KV_CACHE}" ;;
+  esac
+  # shellcheck disable=SC2206
+  CACHE_ARGS=($CACHE_ARG)
+fi
+
 print_model_summary
 echo "==> 시작 (Ctrl+C 종료)"
 echo ""
@@ -55,5 +68,8 @@ exec "$BIN" \
   --ubatch-size "$UBATCH" \
   --parallel "$PARALLEL" \
   --jinja \
+  "${CACHE_ARGS[@]}" \
   "${THINK_ARGS[@]}" \
   "${THREAD_FLAGS[@]}"
+
+
