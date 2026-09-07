@@ -6,7 +6,8 @@
 # 사용법:
 #   # 첫 번째 인자로 slug 지정하면 해당 포트 자동 선택
 #   bash test_server.sh deepseek-1.5b     # -> config/models 에서 포트 읽음
-#   bash test_server.sh qwen3-14b
+#   bash test_server.sh deepseek-r1-32b
+#   bash test_server.sh deepseek-1.5b
 #   # 혹은 직접 주소 지정
 #   LLAMA_HOST=192.168.0.50 LLAMA_PORT=8081 bash test_server.sh
 # ============================================================

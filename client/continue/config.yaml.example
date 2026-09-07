@@ -9,32 +9,31 @@
 # 참고: config.yaml 이 현재 공식 형식. config.json/config.ts 는 구형.
 # ============================================================
 
-name: My Local 2-Model (qwen3-14b + deepseek-1.5b)
+name: My Local 2-Model (deepseek-r1-32b + deepseek-1.5b)
 version: 1.0.0
 schema: v1
 
 # ============================================================
 # 두 모델을 병렬 서버(각각 포트)로 노출.
 # model: 값은 llama-server 의 --alias (또는 /v1/models 보고값)와 일치해야 함.
-#   curl http://<서버IP>:8081/v1/models   # qwen3-14b
-#   curl http://<서버IP>:8080/v1/models   # deepseek
+#   curl http://<서버IP>:8081/v1/models   # deepseek-r1-32b
+#   curl http://<서버IP>:8080/v1/models   # deepseek-1.5b
 # ============================================================
 models:
-  # ---- 메인: Qwen3-14B (포트 8081) ----
-  - name: Qwen3 14B (메인)
+  # ---- 메인: DeepSeek-R1-Distill-Qwen-32B (포트 8081) ----
+  - name: DeepSeek-R1 32B (메인)
     provider: openai
-    model: qwen3-14b
+    model: deepseek-r1-32b
     apiBase: http://<서버IP>:8081/v1
     apiKey: none
-    # dense 14B: 코드 편집(edit/apply)·복잡 추론에 적합
+    # R1 reasoning 모델: 항상 <think> 먼저 출력.
+    # edit/apply(정확한 diff)엔 부적합 -> chat 위주. (경험상 apply 쓰고 싶으면 별도 추가)
     roles:
       - chat
-      - edit
-      - apply
     defaultCompletionOptions:
       contextLength: 16384    # llama-server --ctx-size 와 맞출 것
       maxTokens: 4096
-      temperature: 0.2
+      temperature: 0.6
     autocompleteOptions:
       disable: true
 

@@ -4,15 +4,15 @@
 #   지정 모델 프로파일로 llama-server 를 포그라운드 실행 (테스트/수동).
 #   Ctrl+C 로 종료. systemd 상시화는 install_models.sh 참고.
 #
-# slug 예: deepseek-1.5b, qwen3-14b
+# slug 예: deepseek-1.5b, deepseek-r1-32b
 #
 # 사용법:
 #   bash run_one.sh deepseek-1.5b
-#   bash run_one.sh qwen3-14b
+#   bash run_one.sh deepseek-r1-32b
 # ============================================================
 set -euo pipefail
 
-SLUG="${1:?사용법: bash run_one.sh <slug> (예: qwen3-14b)}"
+SLUG="${1:?사용법: bash run_one.sh <slug> (예: deepseek-r1-32b)}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091

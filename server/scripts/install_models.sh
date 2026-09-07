@@ -7,13 +7,13 @@
 #   생성 유닛: /etc/systemd/system/myllm-llama@<slug>.service
 #
 # 사용법:
-#   bash install_models.sh                # 모든 활성 slug 설치·시작
-#   bash install_models.sh qwen3-14b      # 특정 slug 만
+#   bash install_models.sh                    # 모든 활성 slug 설치·시작
+#   bash install_models.sh deepseek-r1-32b    # 특정 slug 만
 #
 # 관리:
 #   systemctl status 'myllm-llama@*'
-#   journalctl -u 'myllm-llama@qwen3-14b' -f
-#   sudo systemctl restart myllm-llama@qwen3-14b
+#   journalctl -u 'myllm-llama@deepseek-r1-32b' -f
+#   sudo systemctl restart myllm-llama@deepseek-r1-32b
 #   sudo systemctl stop myllm-llama@deepseek-1.5b
 # ============================================================
 set -euo pipefail

@@ -65,4 +65,4 @@ echo "==> 완료. 버전 확인:"
 "$LLAMA_CPP_DIR/llama-server" --version
 
 echo ""
-echo "다음 단계: bash download.sh <slug>   (예: qwen3-14b)  = GGUF 다운로드 (config/models/*.env 참고)"
+echo "다음 단계: bash download.sh <slug>   (예: deepseek-r1-32b)  = GGUF 다운로드 (config/models/*.env 참고)"

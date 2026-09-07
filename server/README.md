@@ -7,8 +7,11 @@
 기본 구성되는 모델 프로파일:
 | slug | 모델 | GGUF 크기 | 포트 | 용도 |
 |------|------|-----------|------|------|
-| `qwen3-14b` | Qwen3-14B (공식) | ~9.3GB | 8081 | 메인 (코딩/편집/추론) |
+| `deepseek-r1-32b` | DeepSeek-R1-Distill-Qwen-32B (unsloth) | ~19.9GB | 8081 | 메인 (무거운 reasoning, 느림) |
 | `deepseek-1.5b` | DeepSeek-R1-Distill-Qwen-1.5B | ~1.0GB | 8080 | 경량 보조 (빠른 채팅) |
+
+> 두 모델 모두 R1 distill = **항상 `<think>` 먼저 출력, 억제 불가**.
+> 32B 메인은 9700X CPU에서 ~2.5-4 t/s 예상(대역폭 병목). 함께 돌면 1.5B 속도에도 영향.
 
 ---
 
@@ -25,9 +28,9 @@ cp config/env.example config/env
 nano config/env        # LLAMA_HOST(0.0.0.0), 경로/토큰/스레드 등
 
 # 사용할 모델 프로파일 활성화 (.env.example -> .env)
-cp config/models/qwen3-14b.env.example     config/models/qwen3-14b.env
-cp config/models/deepseek-1.5b.env.example config/models/deepseek-1.5b.env
-nano config/models/qwen3-14b.env           # 포트/스레드/ctx/양자화 조정
+cp config/models/deepseek-r1-32b.env.example config/models/deepseek-r1-32b.env
+cp config/models/deepseek-1.5b.env.example    config/models/deepseek-1.5b.env
+nano config/models/deepseek-r1-32b.env        # 포트/스레드/ctx/양자화 조정
 ```
 
 > 활성화된 모델 = `config/models/*.env` 에 존재하는 것. `run_all.sh` / `install_models.sh` 가
@@ -54,8 +57,8 @@ bash scripts/06_set_hf_token.sh
 
 다운로드 (모델별):
 ```bash
-bash scripts/download.sh qwen3-14b     # ~9.3GB
-bash scripts/download.sh deepseek-1.5b # ~1.0GB
+bash scripts/download.sh deepseek-r1-32b # ~19.9GB
+bash scripts/download.sh deepseek-1.5b   # ~1.0GB
 ```
 `~/models/<파일>` 로 저장. 중단 시 재실행하면 이어받기.
 
@@ -68,9 +71,9 @@ bash scripts/run_all.sh            # config/models/*.env 전부 백그라운드 
 ```
 - 각 모델 READY 로그를 확인 후(로드 몇 분) 다른 터미널에서:
 ```bash
-bash scripts/test_server.sh qwen3-14b      # or deepseek-1.5b
+bash scripts/test_server.sh deepseek-r1-32b      # or deepseek-1.5b
 # 원격이면:
-LLAMA_HOST=<서버IP> bash scripts/test_server.sh qwen3-14b
+LLAMA_HOST=<서버IP> bash scripts/test_server.sh deepseek-r1-32b
 ```
 모델별 alias 확인: `curl http://127.0.0.1:8081/v1/models`
 
@@ -87,14 +90,14 @@ bash scripts/run_all.sh --status
 3단계 데몬을 모두 종료한 뒤(중복 방지):
 ```bash
 bash scripts/install_models.sh           # 활성 모델 각각 enable+start
-# 특정 모델만: bash scripts/install_models.sh qwen3-14b
+# 특정 모델만: bash scripts/install_models.sh deepseek-r1-32b
 ```
 
 관리 (템플릿 유닛 `myllm-llama@<slug>`):
 ```bash
 systemctl status 'myllm-llama@*'
-journalctl -u 'myllm-llama@qwen3-14b' -f
-sudo systemctl restart myllm-llama@qwen3-14b
+journalctl -u 'myllm-llama@deepseek-r1-32b' -f
+sudo systemctl restart myllm-llama@deepseek-r1-32b
 sudo systemctl stop myllm-llama@deepseek-1.5b
 
 # 방화벽
@@ -110,7 +113,7 @@ hostname -I
 
 클라이언트 컴퓨터의 VS Code 에서 `Continue` 확장 설치 후,
 `~/.continue/config.yaml` 를 `client/continue/config.yaml.example` 를 참고해 작성:
-- qwen3-14b → `http://<서버IP>:8081/v1` (메인: chat/edit/apply)
+- deepseek-r1-32b → `http://<서버IP>:8081/v1` (메인: chat)
 - deepseek-1.5b → `http://<서버IP>:8080/v1` (보조: chat)
 
 자세한 내용은 저장소 루트 `README.md` 및 `PLAN.md` 참고.

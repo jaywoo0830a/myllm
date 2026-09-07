@@ -4,8 +4,10 @@
 OpenAI 호환 API로 동시 서빙하고, 이 저장소(=클라이언트 머신)의 **VS Code Continue.dev** 가 그 API를 원격 호출하는 구축 프로젝트.
 
 현재 구성된 모델 프로파일 (`server/config/models/`):
-- **`qwen3-14b`** — Qwen3-14B (Q4_K_M, ~9.3GB) — 메인 (포트 **8081**)
+- **`deepseek-r1-32b`** — DeepSeek-R1-Distill-Qwen-32B (Q4_K_M, ~19.9GB) — 메인 (포트 **8081**)
 - **`deepseek-1.5b`** — DeepSeek-R1-Distill-Qwen-1.5B (Q4_K_M, ~1.0GB) — 경량 보조 (포트 **8080**)
+
+> R1 distill 계열 두 모델 모두 **항상 `<think>`(reasoning) 먼저 출력**하며 억제가 불가합니다.
 
 ## 구조
 
@@ -17,8 +19,8 @@ myllm/
 │   ├── config/
 │   │   ├── env.example          #   공통(base) 설정 (host/경로/token)
 │   │   └── models/              #   모델 프로파일 (slug 단위)
-│   │       ├── deepseek-1.5b.env.example
-│   │       └── qwen3-14b.env.example
+│   │   ├── deepseek-r1-32b.env.example
+│   │   └── deepseek-1.5b.env.example
 │   ├── scripts/
 │   │   ├── lib.sh               #   공통 헬퍼 (env 로드/토큰/경로)
 │   │   ├── 01_setup_llamacpp.sh #   llama.cpp 빌드 (AVX-512, master)
@@ -41,7 +43,7 @@ myllm/
   VS Code &#8594; Continue.dev
       │  OpenAI 호환 /v1
       ├─ http://<서버IP>:8080/v1   (deepseek-1.5b, 경량 보조)
-      └─ http://<서버IP>:8081/v1   (qwen3-14b, 메인)
+      └─ http://<서버IP>:8081/v1   (deepseek-r1-32b, 메인)
 [베어메탈 서버] llama-server x2 (각 프로파일 1개 프로세스, CPU 스레드 분할)
 ```
 
@@ -52,19 +54,19 @@ git clone <repo-url> myllm && cd myllm/server
 
 # 1) 공통 설정 + 모델 프로파일 활성화
 cp config/env.example config/env
-cp config/models/qwen3-14b.env.example     config/models/qwen3-14b.env
-cp config/models/deepseek-1.5b.env.example config/models/deepseek-1.5b.env
+cp config/models/deepseek-r1-32b.env.example config/models/deepseek-r1-32b.env
+cp config/models/deepseek-1.5b.env.example    config/models/deepseek-1.5b.env
 #    (포트/스레드/ctx 등 편집 가능)
 
 # 2) 빌드 + 토큰 + 다운로드
 bash scripts/01_setup_llamacpp.sh          # llama.cpp 빌드
 bash scripts/06_set_hf_token.sh            # (선택) HF Read 토큰
-bash scripts/download.sh qwen3-14b         # ~9.3GB
+bash scripts/download.sh deepseek-r1-32b   # ~19.9GB
 bash scripts/download.sh deepseek-1.5b     # ~1.0GB
 
 # 3) 테스트 실행 (모두 백그라운드)
 bash scripts/run_all.sh
-bash scripts/test_server.sh qwen3-14b      # pong 확인
+bash scripts/test_server.sh deepseek-r1-32b   # pong 확인 (로드 오래 걸림)
 bash scripts/test_server.sh deepseek-1.5b
 bash scripts/run_all.sh --stop
 
@@ -81,14 +83,15 @@ hostname -I                                # 서버 IP 기록
 2. `cp client/continue/config.yaml.example ~/.continue/config.yaml`
 3. `<서버IP>` 를 실제 IP로 교체, 각 모델 `apiBase`(포트 8080/8081) 확인.
    모델 id 는 `curl http://<서버IP>:<포트>/v1/models` 로 확인해 `model:` 값과 일치.
-4. Continue 패널에서 메인(qwen3-14b)은 채팅/편집, 보조(deepseek-1.5b)는 빠른 채팅 등으로 선택 사용
+4. Continue 패널에서 메인(deepseek-r1-32b)과 보조(deepseek-1.5b)를 모델 선택해 사용
+   (둘 다 reasoning — 답변 전 `<think>`가 길게 나올 수 있음)
 
 ## 참고
 - GPU 없이 CPU 8코어로 동시 2모델:
-  - `qwen3-14b`(메인, ~9.3GB, 8스레드/포트8081) — 무거운 코딩/편집/추론
-  - `deepseek-1.5b`(보조, ~1.0GB, 4스레드/포트8080) — 빠른 채팅/요약
-- 8코어를 스레드로 분할하므로 동시 요청 시 성능 분산 — 프로파일의 `THREADS` 로 조절.
+  - `deepseek-r1-32b`(메인, ~19.9GB, 8스레드/포트8081) — 무거운 reasoning (단 **~2.5-4 t/s로 느림**, CoT 포함 답변에 수 분 가능)
+  - `deepseek-1.5b`(보조, ~1.0GB, 4스레드/포트8080) — 빠른 채팅
+- 8코어·대역폭 공유 → 동시 요청 시 성능 분산. `THREADS` 로 조절.
 - GGUF:
-  - `Qwen/Qwen3-14B-GGUF` → `Qwen3-14B-Q4_K_M.gguf`
+  - `unsloth/DeepSeek-R1-Distill-Qwen-32B-GGUF` → `DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf`
   - `unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF` → `DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf`
 - 상세 모델 팩트·리스크는 `PLAN.md` 를 볼 것.
