@@ -38,7 +38,7 @@ else
 fi
 
 # <think>/chain-of-thought 억제 플래그 (선택)
-# NO_THINK=1 일 때만 --no-think 추가. 기본 0 (Coder-Instruct 는 thinking 강제 안 함)
+# NO_THINK=1 일 때만 --no-think 추가. 기본 0. (thinking 모델 억제 원할 때만 사용)
 # 주의: --no-think 는 최신 llama.cpp 에서만 지원. 구버전이면 시작 오류 -> llama.cpp 최신화 또는 NO_THINK=0
 THINK_ARGS=()
 if [[ "${NO_THINK:-0}" == "1" ]]; then

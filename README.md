@@ -1,6 +1,6 @@
 # myllm
 
-**Qwen3-Coder-30B-A3B-Instruct(Q4_K_M, MoE)** 를 **별도 베어메탈 서버**(9700X · 64GB · Ubuntu)에서
+**LiquidAI LFM2.5-1.2B-Instruct(Q4_K_M, 1.2B)** 를 **별도 베어메탈 서버**(9700X · 64GB · Ubuntu)에서
 `llama.cpp llama-server` 로 OpenAI 호환 API 서빙하고, 이 저장소(=클라이언트 머신)의 **VS Code Continue.dev** 가 그 API를 원격 호출하는 구축 프로젝트.
 
 ## 구조
@@ -31,7 +31,7 @@ myllm/
   VS Code &#8594; Continue.dev
       │  OpenAI 호환 /v1/chat/completions   (provider: openai)
       ▼  http://<서버IP>:8080/v1
-[베어메탈 서버] llama-server &#8592; Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf (~18.6GB, RAM 로드, CPU, MoE)
+[베어메탈 서버] llama-server &#8592; LFM2.5-1.2B-Instruct-Q4_K_M.gguf (~0.7GB, RAM 로드, CPU, 고속)
 ```
 
 ## 빠른 시작
@@ -61,6 +61,6 @@ hostname -I                        # 서버 IP 기록
 4. Continue 패널에서 채팅/편집 사용
 
 ## 참고
-- MoE(활성 ~3B/토큰) 라 CPU 8코어에서 dense 대비 **몇 배 빠른 디코드** 예상(실측 필요).
-- GGUF 출처(사용자 선택): `unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF` — `Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf`.
+- 1.2B(≈0.7GB) 소형 고속 모델 — 9700X CPU 8코어에서 **매우 빠른 응답** 예상(실측 필요).
+- GGUF 출처(사용자 선택): `LiquidAI/LFM2.5-1.2B-Instruct-GGUF` — `LFM2.5-1.2B-Instruct-Q4_K_M.gguf`.
 - 상세 모델 팩트·리스크는 `PLAN.md` 를 볼 것.

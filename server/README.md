@@ -22,15 +22,16 @@ nano config/env        # HOST/PORT, HF_REPO, MODEL_FILE 등을 확인/조정
 ```
 
 - 기본 포트 `8080`. 원격 VS Code 접속을 위해 `LLAMA_HOST=0.0.0.0` 로 LAN에 열림.
-- GGUF (사용자 선택): `unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF` 의
-  `Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf` (≈18.6GB). MoE — 토큰당 활성 ~3B, arch `qwen3moe`(llama.cpp 안정).
+- GGUF (사용자 선택): `LiquidAI/LFM2.5-1.2B-Instruct-GGUF` 의
+  `LFM2.5-1.2B-Instruct-Q4_K_M.gguf` (≈0.7GB). 1.2B 고속 모델, arch `lfm2`(llama.cpp 지원).
+  - 참고: conv/liquid hybrid 라 표준 dense보다 build-maturity 민감 — 첫 로드 시 llama.cpp 최신 master 권장.
   - 다른 양자화(IQ4_XS/Q5_K_M 등)를 쓰려면 `env` 의 `HF_REPO`/`MODEL_FILE` 변경.
 
 ---
 
 ## 1) llama.cpp 빌드 (설치 전 최신 master 필수)
 
-> **중요**: llama.cpp 가 최신 master 여야 `qwen3moe` 및 최신 기능 지원.
+> **중요**: llama.cpp 가 최신 master 여야 `lfm2` 및 최신 기능 지원.
 > 이 스크립트는 master 를 클론/업데이트하고 AVX-512 로 빌드한다.
 
 ```bash
@@ -140,4 +141,4 @@ hostname -I
 | 모델 로드 실패/arch 오류 | llama.cpp 가 오래된 버전 → `01_setup_llamacpp.sh` 재실행(master 갱신) |
 | 응답에 장문 chain-of-thought | `env` 의 `NO_THINK=1`(미지원 버전이면 llama.cpp 최신화) |
 | 클라이언트 연결 안 됨 | `test_server.sh` 로 서버 쪽 먼저, 서버 IP/방화벽/`apiBase`의 `/v1` 확인 |
-| 느림 | CPU 8코어. MoE(활성~3B)라 보통 만족스러움. 그래도 느리면 `CTX_SIZE`/스레드(-t) 튜닝 |
+| 느림 | CPU 8코어. 1.2B 소형이라 보통 매우 빠름. 그래도 느리면 `CTX_SIZE`/스레드(-t) 튜닝 |

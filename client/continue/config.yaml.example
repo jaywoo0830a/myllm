@@ -9,23 +9,22 @@
 # 참고: config.yaml 이 현재 공식 형식. config.json/config.ts 는 구형.
 # ============================================================
 
-name: My Local Qwen
+name: My Local LFM2.5
 version: 1.0.0
 schema: v1
 
 models:
-  - name: Qwen3 Coder 30B-A3B (llama.cpp)
+  - name: LFM2.5 1.2B Instruct (llama.cpp)
     # llama-server 의 OpenAI 호환 /v1 을 쓰므로 provider 는 openai
     provider: openai
     # llama-server 가 /v1/models 에서 보고하는 모델 id(또는 --alias 로 지정한 이름)와 일치해야 함.
     # 확실하지 않으면:   curl http://<서버IP>:8080/v1/models   로 확인 후 여기에 그대로 입력.
-    model: Qwen3-Coder-30B-A3B-Instruct
+    model: LFM2.5-1.2B-Instruct
     # 반드시 /v1 포함. Continue 는 여기에 chat/completions 등을 붙인다.
     apiBase: http://<서버IP>:8080/v1
     # llama.cpp 는 키를 무시하지만 Continue 가 Bearer 헤더로 보내므로 아무 값이나.
     apiKey: none
-    # Qwen3-Coder 는 채팅/코드 편집에 강하지만 FIM 자동완성 전용 모델은 아님.
-    # tab-autocomplete 는 별도 소형 FIM 모델로, 여기선 제외.
+    # 1.2B 고속 모델. 속도 우선용(빠른 채팅/요약/가벼운 편집). FIM 탭자동완성 아님.
     roles:
       - chat
       - edit
@@ -33,12 +32,12 @@ models:
     defaultCompletionOptions:
       contextLength: 32768    # llama-server --ctx-size 와 맞출 것
       maxTokens: 2048
-      temperature: 0.2
+      temperature: 0.4        # 소형 모델이라 적당한 창의성
     # 혹시 탭 자동완성이 chat 모델로 잘못 발동하면 강제로 끔
     autocompleteOptions:
       disable: true
 
-# 참고: 별도의 작은 FIM 자동완성 모델(예: Qwen Coder 계열)을 추가하려면
+# 참고: 별도의 작은 FIM 자동완성 모델을 추가하려면
 # 아래처럼 별도 항목을 만들고 roles 를 [autocomplete] 로 지정한다.
 #   - name: Tab Autocomplete
 #     provider: openai
