@@ -42,21 +42,30 @@ if [[ "${NO_THINK:-0}" == "1" ]]; then THINK_ARGS+=(--reasoning off); fi
 
 # KV 캐시 양자화 (OPT: 메모리 대역폭 절약으로 디코드 t/s 개선).
 #   프로파일 KV_CACHE 예: "q8_0"
-#   안전 처리: 이 llama.cpp 빌드가 어떤 cache 옵션을 지원하는지 --help 로 탐지하고,
-#   지원되는 경우에만 추가한다. 미지원이면 조용히 스킵(시작 실패 방지).
+#   이 llama.cpp 는 개별 플래그 --cache-type-k / --cache-type-v 를 쓴다 (-ctk/-ctv).
+#   단일 --cache-type 문법이 아님에 주의. 지원 여부를 --help 로 탐지해 추가.
+#   미지원이면 경고 후 스킵 (시작 실패 방지).
 CACHE_ARGS=()
 if [[ -n "${KV_CACHE:-}" ]]; then
-  # 지원 문법 탐지: 우선순위 1) --cache-type k:..,v:..  2) --no-kv (구식)  3) 없음
   _help="$("$BIN" --help 2>&1)"
-  if grep -q -- "--cache-type" <<<"$_help"; then
+  if grep -q -- "--cache-type-k" <<<"$_help"; then
+    # 값이 "k:..","v:.."콤마 형태면 분리, 아니면 K/V 양쪽에 동일 적용
     case "$KV_CACHE" in
-      *:*) CACHE_ARG="--cache-type ${KV_CACHE}" ;;
-      *)   CACHE_ARG="--cache-type k:${KV_CACHE},v:${KV_CACHE}" ;;
+      *:*)
+        # 예: "k:q4_0,v:q8_0" 지원
+        KTYPE="$(cut -d, -f1 <<<"$KV_CACHE" | cut -d: -f2)"
+        VTYPE="$(cut -d, -f2 <<<"$KV_CACHE" | cut -d: -f2)"
+        [[ -n "$KTYPE" ]] && CACHE_ARGS+=(--cache-type-k "$KTYPE")
+        [[ -n "$VTYPE" ]] && CACHE_ARGS+=(--cache-type-v "$VTYPE")
+        ;;
+      *)
+        CACHE_ARGS=(--cache-type-k "$KV_CACHE" --cache-type-v "$KV_CACHE")
+        ;;
     esac
-    CACHE_ARGS=($CACHE_ARG)
-    echo "==> KV 캐시: $KV_CACHE (--cache-type 지원 확인)"
+    echo "==> KV 캐시: K=${KV_CACHE%%:*} V=${KV_CACHE##*:}"
+    echo "    args: ${CACHE_ARGS[*]}"
   else
-    echo "==> [warn] 이 llama.cpp 는 --cache-type 미지원 → KV_CACHE($KV_CACHE) 무시하고 기본(f16)으로 시작" >&2
+    echo "==> [warn] 이 llama.cpp 는 --cache-type-k 미지원 → KV_CACHE($KV_CACHE) 무시, 기본(f16) 시작" >&2
   fi
 fi
 
