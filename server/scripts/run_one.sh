@@ -37,7 +37,9 @@ THREAD_FLAGS=()
 if [[ "${THREADS:-0}" != "0" ]]; then THREAD_FLAGS=(-t "$THREADS"); fi
 
 THINK_ARGS=()
-if [[ "${NO_THINK:-0}" == "1" ]]; then THINK_ARGS+=(--no-think); fi
+# NO_THINK=1 이면 reasoning(<think>) 억제: --reasoning off
+#  (참고: 옛 `--no-think` 는 최신 llama.cpp 에서 invalid arg. --reasoning [on|off|auto] 사용)
+if [[ "${NO_THINK:-0}" == "1" ]]; then THINK_ARGS+=(--reasoning off); fi
 
 print_model_summary
 echo "==> 시작 (Ctrl+C 종료)"
