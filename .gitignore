@@ -1,5 +1,7 @@
 # machine-generated env (env.example 를 원본으로 둠)
 server/config/env
+# machine-generated model profiles (models/*.env.example 는 유지)
+server/config/models/*.env
 # HuggingFace 토큰 (비밀 - 절대 커밋 금지)
 server/config/hf_token
 

@@ -1,55 +1,77 @@
 # myllm
 
-**DeepSeek-R1-Distill-Qwen-1.5B(Q4_K_M, 1.5B)** 를 **별도 베어메탈 서버**(9700X · 64GB · Ubuntu)에서
-`llama.cpp llama-server` 로 OpenAI 호환 API 서빙하고, 이 저장소(=클라이언트 머신)의 **VS Code Continue.dev** 가 그 API를 원격 호출하는 구축 프로젝트.
+**여러 로컬 모델**을 **별도 베어메탈 서버**(9700X · 64GB · Ubuntu)에서 `llama.cpp llama-server` 로
+OpenAI 호환 API로 동시 서빙하고, 이 저장소(=클라이언트 머신)의 **VS Code Continue.dev** 가 그 API를 원격 호출하는 구축 프로젝트.
+
+현재 구성된 모델 프로파일 (`server/config/models/`):
+- **`qwen3-14b`** — Qwen3-14B (Q4_K_M, ~9.3GB) — 메인 (포트 **8081**)
+- **`deepseek-1.5b`** — DeepSeek-R1-Distill-Qwen-1.5B (Q4_K_M, ~1.0GB) — 경량 보조 (포트 **8080**)
 
 ## 구조
 
 ```
 myllm/
-├── PLAN.md                      # 아키텍처/모델 팩트/단계 총정리
+├── PLAN.md                      # 아키텍처/모델 팩트/단계
 ├── server/                      # ★ 베어메탈 서버에서 pull 해서 실행
-│   ├── README.md                #   설치/운영 순서 안내 (가장 먼저 읽기)
-│   ├── config/env.example       #   환경설정 (포트/모델/추론 파라미터)
+│   ├── README.md                #   설치/운영 순서 (가장 먼저 읽기)
+│   ├── config/
+│   │   ├── env.example          #   공통(base) 설정 (host/경로/token)
+│   │   └── models/              #   모델 프로파일 (slug 단위)
+│   │       ├── deepseek-1.5b.env.example
+│   │       └── qwen3-14b.env.example
 │   ├── scripts/
-│   │   ├── 01_setup_llamacpp.sh #   llama.cpp 빌드 (AVX-512, 최신 master)
-│   │   ├── 02_download_model.sh #   GGUF 다운로드 (HF토큰/이어받기/병렬)
-│   │   ├── 03_run_server.sh     #   llama-server 실행(테스트/수동)
-│   │   ├── 05_install_systemd.sh#   systemd 상시 데몬 등록
+│   │   ├── lib.sh               #   공통 헬퍼 (env 로드/토큰/경로)
+│   │   ├── 01_setup_llamacpp.sh #   llama.cpp 빌드 (AVX-512, master)
 │   │   ├── 06_set_hf_token.sh   #   HF Read 토큰 저장 (gitignore)
-│   │   └── test_server.sh       #   /v1 스모크 테스트(curl)
-│   └── systemd/myllm-llama.service
+│   │   ├── download.sh <slug>   #   모델별 GGUF 다운로드(토큰/이어받기)
+│   │   ├── run_one.sh <slug>    #   모델별 llama-server (테스트/수동)
+│   │   ├── run_all.sh           #   모든 모델 백그라운드(테스트용)
+│   │   ├── install_models.sh    #   모델별 systemd 템플릿 등록(상시화)
+│   │   └── test_server.sh <slug>#   /v1 스모크 테스트
+│   └── systemd/myllm-llama@.service   # systemd 템플릿(@모델slug)
 └── client/                      # 클라이언트(VS Code) 설정 템플릿
     └── continue/
         └── config.yaml.example  #   Continue.dev ~/.continue/config.yaml 용
 ```
 
-## 연결 구조
+## 연결 구조 (2 모델 병렬)
 
 ```
 [클라이언트 머신 = 이 저장소]
   VS Code &#8594; Continue.dev
-      │  OpenAI 호환 /v1/chat/completions   (provider: openai)
-      ▼  http://<서버IP>:8080/v1
-[베어메탈 서버] llama-server &#8592; DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf (~1.0GB, RAM 로드, CPU, 고속)
+      │  OpenAI 호환 /v1
+      ├─ http://<서버IP>:8080/v1   (deepseek-1.5b, 경량 보조)
+      └─ http://<서버IP>:8081/v1   (qwen3-14b, 메인)
+[베어메탈 서버] llama-server x2 (각 프로파일 1개 프로세스, CPU 스레드 분할)
 ```
 
-## 빠른 시작
+## 빠른 시작 (서버, 베어메탈)
 
-**서버(베어메탈)에서:**
 ```bash
 git clone <repo-url> myllm && cd myllm/server
-cp config/env.example config/env   # 편집(포트/모델 등)
-bash scripts/01_setup_llamacpp.sh  # llama.cpp 빌드
-bash scripts/06_set_hf_token.sh    # (선택) HF Read 토큰 -> 인증 다운로드
-bash scripts/02_download_model.sh  # GGUF 다운로드 (token 사용, 이어받기)
-bash scripts/03_run_server.sh      # 1차 실행
-#  다른 터미널:
-bash scripts/test_server.sh        # pong 확인
-#  Ctrl+C 후 상시화:
-bash scripts/05_install_systemd.sh
-sudo ufw allow 8080/tcp
-hostname -I                        # 서버 IP 기록
+
+# 1) 공통 설정 + 모델 프로파일 활성화
+cp config/env.example config/env
+cp config/models/qwen3-14b.env.example     config/models/qwen3-14b.env
+cp config/models/deepseek-1.5b.env.example config/models/deepseek-1.5b.env
+#    (포트/스레드/ctx 등 편집 가능)
+
+# 2) 빌드 + 토큰 + 다운로드
+bash scripts/01_setup_llamacpp.sh          # llama.cpp 빌드
+bash scripts/06_set_hf_token.sh            # (선택) HF Read 토큰
+bash scripts/download.sh qwen3-14b         # ~9.3GB
+bash scripts/download.sh deepseek-1.5b     # ~1.0GB
+
+# 3) 테스트 실행 (모두 백그라운드)
+bash scripts/run_all.sh
+bash scripts/test_server.sh qwen3-14b      # pong 확인
+bash scripts/test_server.sh deepseek-1.5b
+bash scripts/run_all.sh --stop
+
+# 4) 상시화 (systemd, 재부팅 자동)
+bash scripts/install_models.sh             # config/models/*.env 전부
+sudo ufw allow 8080/tcp && sudo ufw allow 8081/tcp
+hostname -I                                # 서버 IP 기록
 ```
 
 자세한 단계는 `server/README.md` 참고.
@@ -57,11 +79,16 @@ hostname -I                        # 서버 IP 기록
 **클라이언트(이 머신의 VS Code)에서:**
 1. Continue 확장 설치
 2. `cp client/continue/config.yaml.example ~/.continue/config.yaml`
-3. `<서버IP>`를 실제 IP로 교체, 모델 id는 `curl http://<서버IP>:8080/v1/models` 로 확인해 맞춤
-4. Continue 패널에서 채팅/편집 사용
+3. `<서버IP>` 를 실제 IP로 교체, 각 모델 `apiBase`(포트 8080/8081) 확인.
+   모델 id 는 `curl http://<서버IP>:<포트>/v1/models` 로 확인해 `model:` 값과 일치.
+4. Continue 패널에서 메인(qwen3-14b)은 채팅/편집, 보조(deepseek-1.5b)는 빠른 채팅 등으로 선택 사용
 
 ## 참고
-- 1.5B(≈1.0GB) reasoning(DeepSeek-R1 distill) 모델 — 9700X CPU 8코어에서 **매우 빠른 응답** 예상.
-  (단 <think> reasoning 토큰이 항상 생성되어 체감은 일반 채팅보다 길 수 있음)
-- GGUF 출처(사용자 선택): `unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF` — `DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf`.
+- GPU 없이 CPU 8코어로 동시 2모델:
+  - `qwen3-14b`(메인, ~9.3GB, 8스레드/포트8081) — 무거운 코딩/편집/추론
+  - `deepseek-1.5b`(보조, ~1.0GB, 4스레드/포트8080) — 빠른 채팅/요약
+- 8코어를 스레드로 분할하므로 동시 요청 시 성능 분산 — 프로파일의 `THREADS` 로 조절.
+- GGUF:
+  - `Qwen/Qwen3-14B-GGUF` → `Qwen3-14B-Q4_K_M.gguf`
+  - `unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF` → `DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf`
 - 상세 모델 팩트·리스크는 `PLAN.md` 를 볼 것.

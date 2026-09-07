@@ -1,0 +1,32 @@
+# ============================================================
+# myllm-llama@.service  --  systemd template (모델 인스턴스)
+#   %i = 모델 slug (예: deepseek-1.5b, qwen3-14b)
+#
+#   설치: bash install_models.sh   (각 활성 slug 마다 enable + start)
+#   하나씩:
+#     sudo systemctl enable --now myllm-llama@qwen3-14b
+#     sudo systemctl enable --now myllm-llama@deepseek-1.5b
+#   관리:
+#     systemctl status 'myllm-llama@*'
+#     journalctl -u 'myllm-llama@qwen3-14b' -f
+# ============================================================
+[Unit]
+Description=myLLM llama.cpp server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# User 는 install_models.sh 가 실행 사용자로 치환
+User={{USER}}
+WorkingDirectory={{SCRIPT_DIR}}
+ExecStart=/usr/bin/env bash {{SCRIPT_DIR}}/run_one.sh %i
+Restart=on-failure
+RestartSec=5
+# 큰 모델 RAM 로드 시간 허용
+TimeoutStartSec=infinity
+TimeoutStopSec=30
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

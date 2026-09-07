@@ -9,42 +9,57 @@
 # 참고: config.yaml 이 현재 공식 형식. config.json/config.ts 는 구형.
 # ============================================================
 
-name: My Local DeepSeek-R1-1.5B
+name: My Local 2-Model (qwen3-14b + deepseek-1.5b)
 version: 1.0.0
 schema: v1
 
+# ============================================================
+# 두 모델을 병렬 서버(각각 포트)로 노출.
+# model: 값은 llama-server 의 --alias (또는 /v1/models 보고값)와 일치해야 함.
+#   curl http://<서버IP>:8081/v1/models   # qwen3-14b
+#   curl http://<서버IP>:8080/v1/models   # deepseek
+# ============================================================
 models:
-  - name: DeepSeek-R1-Distill-Qwen-1.5B (llama.cpp)
-    # llama-server 의 OpenAI 호환 /v1 을 쓰므로 provider 는 openai
+  # ---- 메인: Qwen3-14B (포트 8081) ----
+  - name: Qwen3 14B (메인)
     provider: openai
-    # llama-server 가 /v1/models 에서 보고하는 모델 id(또는 --alias 로 지정한 이름)와 일치해야 함.
-    # 확실하지 않으면:   curl http://<서버IP>:8080/v1/models   로 확인 후 여기에 그대로 입력.
-    model: DeepSeek-R1-Distill-Qwen-1.5B
-    # 반드시 /v1 포함. Continue 는 여기에 chat/completions 등을 붙인다.
-    apiBase: http://<서버IP>:8080/v1
-    # llama.cpp 는 키를 무시하지만 Continue 가 Bearer 헤더로 보내므로 아무 값이나.
+    model: qwen3-14b
+    apiBase: http://<서버IP>:8081/v1
     apiKey: none
-    # reasoning(DeepSeek-R1 distill) 모델: 채팅/질문·답변(추론)에 특화.
-    # R1 distill 은 긴 <think> 를 먼저 출력하므로 edit/apply(정확한 diff)엔 덜 맞음.
-    # edit/apply 도 쓰고 싶으면 아래 주석 해제하세요. 탭자동완성(FIM) 아님.
+    # dense 14B: 코드 편집(edit/apply)·복잡 추론에 적합
     roles:
       - chat
-    #   - edit
-    #   - apply
+      - edit
+      - apply
     defaultCompletionOptions:
-      contextLength: 32768    # llama-server --ctx-size 와 맞출 것
-      maxTokens: 2048
-      temperature: 0.6
-    # 혹시 탭 자동완성이 chat 모델로 잘못 발동하면 강제로 끔
+      contextLength: 16384    # llama-server --ctx-size 와 맞출 것
+      maxTokens: 4096
+      temperature: 0.2
     autocompleteOptions:
       disable: true
 
-# 참고: 별도의 작은 FIM 자동완성 모델을 추가하려면
-# 아래처럼 별도 항목을 만들고 roles 를 [autocomplete] 로 지정한다.
+  # ---- 보조: DeepSeek-R1-Distill-Qwen-1.5B (포트 8080) ----
+  - name: DeepSeek-R1 1.5B (보조/빠른 채팅)
+    provider: openai
+    model: deepseek-r1-1.5b
+    apiBase: http://<서버IP>:8080/v1
+    apiKey: none
+    # reasoning 모델: 긴 <think> 먼저 출력 -> edit/apply(정확한 diff)엔 덜 맞음.
+    roles:
+      - chat
+    defaultCompletionOptions:
+      contextLength: 16384
+      maxTokens: 2048
+      temperature: 0.6
+    autocompleteOptions:
+      disable: true
+
+# 참고: 탭 자동완성용 별도 FIM 모델을 추가하려면
+# 아래처럼 roles 를 [autocomplete] 로 지정한 항목을 따로 넣는다.
 #   - name: Tab Autocomplete
 #     provider: openai
 #     model: <fim-model-id>
-#     apiBase: http://<서버IP>:8080/v1
+#     apiBase: http://<서버IP>:8081/v1
 #     apiKey: none
 #     roles:
 #       - autocomplete

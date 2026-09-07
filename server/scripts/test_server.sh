@@ -1,24 +1,31 @@
 #!/usr/bin/env bash
 # ============================================================
-# test_server.sh
+# test_server.sh [slug]
 #   llama-server 가 떠 있는지 /v1 OpenAI 호환 스모크 테스트.
-#   서버가 LOCAL(이 머신)이면 그대로, 원격이면 HOST/PORT 를 환변수로.
 #
 # 사용법:
-#   # 로컬 기본값(127.0.0.1:8080) 사용
-#   bash test_server.sh
-#   # 원격 서버 지정
-#   LLAMA_HOST=192.168.0.50 LLAMA_PORT=8080 bash test_server.sh
+#   # 첫 번째 인자로 slug 지정하면 해당 포트 자동 선택
+#   bash test_server.sh deepseek-1.5b     # -> config/models 에서 포트 읽음
+#   bash test_server.sh qwen3-14b
+#   # 혹은 직접 주소 지정
+#   LLAMA_HOST=192.168.0.50 LLAMA_PORT=8081 bash test_server.sh
 # ============================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$(dirname "$SCRIPT_DIR")/config/env"
-if [[ -f "$ENV_FILE" ]]; then
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib.sh"
+
+if [[ -n "${1:-}" ]]; then
+  load_base_env
+  load_model_env "$1" >/dev/null
+  LLAMA_HOST="${LLAMA_HOST:-127.0.0.1}"
+elif [[ -f "$SERVER_CONFIG_DIR/env" ]]; then
   # shellcheck disable=SC1090
-  source "$ENV_FILE"
+  source "$SERVER_CONFIG_DIR/env"
+  LLAMA_HOST="${LLAMA_HOST:-127.0.0.1}"
+  LLAMA_PORT="${LLAMA_PORT:-8080}"
 else
-  # env 없는 경우 기본값
   LLAMA_HOST="${LLAMA_HOST:-127.0.0.1}"
   LLAMA_PORT="${LLAMA_PORT:-8080}"
 fi

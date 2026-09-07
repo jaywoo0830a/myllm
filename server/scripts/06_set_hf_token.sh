@@ -41,4 +41,4 @@ printf '%s' "$TOKEN" > "$TOKEN_FILE"
 chmod 600 "$TOKEN_FILE"
 
 echo "==> 저장 완료: $TOKEN_FILE (권한 600, git 무시됨)"
-echo "    이제 02_download_model.sh 를 실행하면 인증 다운로드로 진행됩니다."
+echo "    이제 bash download.sh <slug> 를 실행하면 인증 다운로드로 진행됩니다."
