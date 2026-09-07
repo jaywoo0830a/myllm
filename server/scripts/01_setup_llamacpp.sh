@@ -3,7 +3,7 @@
 # 01_setup_llamacpp.sh
 #   베어메탈 서버(Ubuntu)에서 llama.cpp 를 빌드한다.
 #   - Zen5(9700X)용 AVX-512 빌드
-#   - 최신 master 빌드 (사용 모델 arch 지원에 최신 필요 — lfm2 등)
+#   - 최신 master 빌드 (기능/보안 최신)
 #   - idempotent: 재실행해도 안전
 #
 # 사용법:

@@ -7,7 +7,7 @@
 #   로그: journalctl -u myllm-llama -f
 # ============================================================
 [Unit]
-Description=myLLM llama.cpp OpenAI-compatible server (LFM2.5-1.2B)
+Description=myLLM llama.cpp OpenAI-compatible server (DeepSeek-R1-Distill-Qwen-1.5B)
 After=network-online.target
 Wants=network-online.target
 
