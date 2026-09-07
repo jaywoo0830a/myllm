@@ -13,9 +13,10 @@ myllm/
 │   ├── config/env.example       #   환경설정 (포트/모델/추론 파라미터)
 │   ├── scripts/
 │   │   ├── 01_setup_llamacpp.sh #   llama.cpp 빌드 (AVX-512, 최신 master)
-│   │   ├── 02_download_model.sh #   GGUF 다운로드
+│   │   ├── 02_download_model.sh #   GGUF 다운로드 (HF토큰/이어받기/병렬)
 │   │   ├── 03_run_server.sh     #   llama-server 실행(테스트/수동)
 │   │   ├── 05_install_systemd.sh#   systemd 상시 데몬 등록
+│   │   ├── 06_set_hf_token.sh   #   HF Read 토큰 저장 (gitignore)
 │   │   └── test_server.sh       #   /v1 스모크 테스트(curl)
 │   └── systemd/myllm-llama.service
 └── client/                      # 클라이언트(VS Code) 설정 템플릿
@@ -40,7 +41,8 @@ myllm/
 git clone <repo-url> myllm && cd myllm/server
 cp config/env.example config/env   # 편집(포트/모델 등)
 bash scripts/01_setup_llamacpp.sh  # llama.cpp 빌드
-bash scripts/02_download_model.sh  # GGUF 다운로드
+bash scripts/06_set_hf_token.sh    # (선택) HF Read 토큰 -> 인증 다운로드
+bash scripts/02_download_model.sh  # GGUF 다운로드 (token 사용, 이어받기)
 bash scripts/03_run_server.sh      # 1차 실행
 #  다른 터미널:
 bash scripts/test_server.sh        # pong 확인

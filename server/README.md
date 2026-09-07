@@ -41,13 +41,35 @@ bash scripts/01_setup_llamacpp.sh
 
 ---
 
-## 2) GGUF 모델 다운로드
+## 2) GGUF 모델 다운로드 (HF 토큰으로 속도/인증 개선 - 권장)
+
+### (선택) HuggingFace Read 토큰 설정 — 인증 다운로드로 속도·안정성 개선
+
+1. https://huggingface.co/settings/tokens 에서 **Read** 권한 토큰 생성.
+2. 서버에서 설정 (입력이 화면/히스토리에 안 남음):
+
+```bash
+bash scripts/06_set_hf_token.sh     # 프롬프트에 토큰 붙여넣기
+```
+
+> 토큰은 `server/config/hf_token` 에 저장되며 **.gitignore 대상**(커밋/푸시 안 됨, 권한 600).
+> 대신 `server/config/env` 의 `HF_TOKEN` 에 직접 넣어도 되고,
+> `~/.cache/huggingface/token`(huggingface-cli 로그인) 도 자동 인식.
+
+### (선택) 병렬 분할 다운로드 도구 (대용량일 때 체감 속도 향상)
+
+```bash
+sudo apt install -y aria2
+# env 의 HF_DL_THREADS 를 4~8 로 설정하면 aria2c 로 분할 다운로드
+```
+
+### 모델 다운로드 실행
 
 ```bash
 bash scripts/02_download_model.sh
 ```
 
-`~/models/<MODEL_FILE>` 로 저장된다.
+`~/models/<MODEL_FILE>` 로 저장. 중단 시 재실행하면 **이어받기**됨.
 
 ---
 
