@@ -13,6 +13,10 @@ source "$SCRIPT_DIR/lib.sh"
 GEN_ROOT="${SERVER_CONFIG_DIR}/../output"
 mkdir -p "$GEN_ROOT"
 
+# Ensure the run directory exists for PID and log files
+RUN_DIR="${SCRIPT_DIR}/../run"
+mkdir -p "$RUN_DIR"
+
 # Load base and model environments (replace MODEL_NAME with your model slug)
 MODEL_SLUG="${1:-mistral-large}"
 load_base_env

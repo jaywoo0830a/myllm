@@ -17,6 +17,10 @@ export THREADS=8               # one thread per physical core
 export KV_CACHE="q8_0"         # KV‑Cache quantisation for a small speed boost
 
 # Start the server using the existing llama_serve_mistral.sh script
+# Ensure the run directory exists (in case init was not run)
+RUN_DIR="${SCRIPT_DIR}/../run"
+mkdir -p "$RUN_DIR"
+
 bash "$SCRIPT_DIR/llama_serve_mistral.sh" &
 SERVER_PID=$!
 echo "Mistral server started with PID $SERVER_PID for slug $MODEL_SLUG"
