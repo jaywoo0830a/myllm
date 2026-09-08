@@ -1,83 +1,116 @@
 #!/usr/bin/env bash
-# ------------------------------------------------------------
+# ============================================================
 # download_all.sh
-#   모든 *.env 및 *.env.example 파일에 정의된 모델을 한 번에 다운로드
-#   - HF_REPO와 MODEL_FILE 를 읽어 HuggingFace에서 GGUF 파일을 가져옵니다
-#   - HF_TOKEN 환경 변수가 있으면 인증 헤더를 추가합니다 (DeepSeek‑V2‑Chat 등)
-#   - aria2c 가 있으면 병렬 다운로드, 없으면 curl 로 폴백합니다
-#   - 파일이 이미 존재하면 스킵합니다
-# ------------------------------------------------------------
+#   모델 폴더(config/models/*.env, *.env.example)의 모든 모델을 한 번에 다운로드
+#   - 각 파일의 HF_REPO 와 MODEL_FILE 을 읽어 HuggingFace 에서 GGUF 를 받습니다
+#   - download.sh 와 동일한 경로 규약을 사용합니다:
+#       * 최종 저장 위치 : ${MODEL_DIR:-~/models}/<MODEL_FILE basename>
+#       * MODEL_FILE 앞의 디렉터리 접두(예: ${MODEL_DIR}/)는 basename 으로 정규화
+#   - 중복 파일(worker1..4 처럼 같은 GGUF 를 여러 인스턴스에 쓰는 경우)은
+#     한 번만 받고 나머지는 skip 합니다
+#   - 토큰은 lib.sh 의 resolve_hf_token 순서로 찾습니다
+#       HF_TOKEN → server/config/hf_token → ~/.cache/huggingface/token
+#   - 다운로더 우선순위: aria2c(병렬) → curl(fallback)
+# ============================================================
 set -euo pipefail
 
-# 1️⃣  작업 디렉터리 설정
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="${BASE_DIR}/../config/models"
-TARGET_DIR="${HOME}/models"
-mkdir -p "${TARGET_DIR}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/lib.sh"
 
-# 2️⃣  토큰 설정 (선택)
-HF_TOKEN="${HF_TOKEN:-}"
+CONFIG_DIR="${SERVER_CONFIG_DIR}/models"
+MODEL_DIR="${MODEL_DIR:-${HOME}/models}"
+mkdir -p "${MODEL_DIR}"
 
-# 3️⃣  파일에서 KEY=VALUE 를 추출하는 함수
-get_key() {
-    local file=$1
-    local key=$2
-    grep -E "^${key}=" "$file" | cut -d'=' -f2- | tr -d '[:space:]'
-}
-
-# 4️⃣  다운로드 함수 (aria2c → curl)
-download_one() {
-    local url=$1
-    local out_path=$2
-    local log_path=$3
-    # 이미 존재하면 스킵
-    if [[ -f "$out_path" ]]; then
-        echo "✅ Model already present at $out_path"
-        return 0
-    fi
-    echo "⬇️  Downloading $(basename "$out_path") from $url"
-    if command -v aria2c >/dev/null 2>&1; then
-        if [[ -n "$HF_TOKEN" ]]; then
-            aria2c --header="Authorization: Bearer ${HF_TOKEN}" -x8 -s8 -k1M -c -d "${TARGET_DIR}" -o "$(basename "$out_path")" "$url" --log="$log_path" || return 1
-        else
-            aria2c -x8 -s8 -k1M -c -d "${TARGET_DIR}" -o "$(basename "$out_path")" "$url" --log="$log_path" || return 1
-        fi
-    else
-        if [[ -n "$HF_TOKEN" ]]; then
-            curl -L -H "Authorization: Bearer ${HF_TOKEN}" -C - "$url" -o "$out_path" || return 1
-        else
-            curl -L -C - "$url" -o "$out_path" || return 1
-        fi
-    fi
-    echo "✅ Download complete: $out_path"
-    return 0
-}
-
-# 5️⃣  메인 루프 – *.env 와 *.env.example 모두 처리
-shopt -s nullglob
-env_files=("${CONFIG_DIR}"/*.env "${CONFIG_DIR}"/*.env.example)
-
-if [[ ${#env_files[@]} -eq 0 ]]; then
-    echo "❌ No *.env or *.env.example files found in $CONFIG_DIR"
-    exit 1
+TOKEN="$(resolve_hf_token)"
+TOKEN_HDR=()
+if [[ -n "$TOKEN" ]]; then
+  TOKEN_HDR=(--header "Authorization: Bearer ${TOKEN}")
 fi
 
-for env_file in "${env_files[@]}"; do
-    # 파일 이름에서 슬러그 추출 (예: parser, worker1)
-    slug="$(basename "$env_file" .env.example)"
-    slug="${slug%.env}"
-    hf_repo=$(get_key "$env_file" "HF_REPO")
-    model_file=$(get_key "$env_file" "MODEL_FILE")
-    if [[ -z "$hf_repo" || -z "$model_file" ]]; then
-        echo "⚠️  $env_file 에서 HF_REPO 혹은 MODEL_FILE 을 찾지 못했습니다 → 건너뛰기"
-        continue
-    fi
-    url="https://huggingface.co/${hf_repo}/resolve/main/${model_file}"
-    out_path="${TARGET_DIR}/${model_file}"
-    log_path="${TARGET_DIR}/${slug}.download.log"
-    if ! download_one "$url" "$out_path" "$log_path"; then
-        echo "❌  $slug 다운로드 실패! 로그: $log_path"
-    fi
- done
+PARALLEL="${HF_DL_THREADS:-8}"
 
-echo "🚀  모든 모델 다운로드 시도가 끝났습니다."
+# KEY=VALUE 추출 (모든 일치 중 마지막, 공백/CR 제거)
+get_key() {
+  local file=$1 key=$2
+  grep -E "^${key}=" "$file" | cut -d'=' -f2- | tr -d '[:space:]' | tail -n1
+}
+
+# 다운로드 함수: aria2c → curl
+download_one() {
+  local url=$1 out_path=$2 log_path=$3
+  local name; name="$(basename "$out_path")"
+  if [[ -f "$out_path" ]]; then
+    echo "✅ SKIP (이미 존재) : ${name}"
+    return 0
+  fi
+  echo "⬇️  ${name}"
+  echo "        ${url}"
+  if command -v aria2c >/dev/null 2>&1; then
+    aria2c -x "$PARALLEL" -s "$PARALLEL" -k 1M -c \
+      "${TOKEN_HDR[@]}" \
+      --max-tries=3 --retry-wait=3 --console-log-level=warn \
+      -d "${MODEL_DIR}" -o "$name" "$url" --log="$log_path" \
+      || { echo "❌ aria2c 실패: ${name} (로그: $log_path)" >&2; return 1; }
+  elif command -v curl >/dev/null 2>&1; then
+    curl -L --fail -C - "${TOKEN_HDR[@]}" "$url" -o "$out_path" \
+      || { echo "❌ curl 실패: ${name}" >&2; return 1; }
+  else
+    echo "❌ aria2c 와 curl 이 모두 없습니다. 하나를 설치하세요." >&2
+    return 1
+  fi
+  echo "✅ ${name}"
+  return 0
+}
+
+# config 경로의 모든 *.env / *.env.example 수집
+shopt -s nullglob
+files=("${CONFIG_DIR}"/*.env "${CONFIG_DIR}"/*.env.example)
+
+if [[ ${#files[@]} -eq 0 ]]; then
+  echo "❌ ${CONFIG_DIR} 아래에 *.env / *.env.example 가 없습니다." >&2
+  exit 1
+fi
+
+# 중복 다운로드 방지: target 파일 이름이 겹치면 첫 파일만 실제 다운로드
+declare -A seen=()
+declare -a jobs=()
+
+for f in "${files[@]}"; do
+  base="$(basename "$f")"
+  slug="${base%.env.example}"
+  slug="${slug%.env}"
+  hf_repo="$(get_key "$f" "HF_REPO")"
+  raw_file="$(get_key "$f" "MODEL_FILE")"
+  if [[ -z "$hf_repo" || -z "$raw_file" ]]; then
+    echo "⚠️  ${base}: HF_REPO 또는 MODEL_FILE 누락 → 건너뜀"
+    continue
+  fi
+  name="$(basename "$raw_file")"
+  out="${MODEL_DIR}/${name}"
+  url="https://huggingface.co/${hf_repo}/resolve/main/${name}"
+  if [[ -z "${seen[$name]:-}" ]]; then
+    seen[$name]="$base"
+    jobs+=("$base|$url|$out")
+  else
+    echo "ℹ️  ${base}: ${name} 는 ${seen[$name]} 와 동일 파일 → 대기열 제외(공유)"
+  fi
+done
+
+echo "── 대상 모델 ${#jobs[@]}개 ──────────────────────────────"
+rc=0
+for job in "${jobs[@]}"; do
+  IFS='|' read -r slug url out <<< "$job"
+  log="${MODEL_DIR}/${slug}.download.log"
+  if [[ -f "$out" ]]; then
+    echo "✅ SKIP (이미 존재) : $(basename "$out")"
+    continue
+  fi
+  if ! download_one "$url" "$out" "$log"; then
+    echo "❌  ${slug} 다운로드 실패" >&2
+    rc=1
+  fi
+done
+
+echo "🚀  전부 끝났습니다. (실패 시 exit=$rc / 저장위치: ${MODEL_DIR})"
+exit "$rc"
