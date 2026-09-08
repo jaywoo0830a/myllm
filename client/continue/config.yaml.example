@@ -22,7 +22,7 @@ models:
   - name: Mistral-Small-24B-Instruct-2501 (로컬)
     provider: openai
     model: mistral-large
-    apiBase: http://<서버IP>:8082/v1
+    apiBase: http://<서버IP>:8081/v1
     apiKey: none
     roles:
       - chat

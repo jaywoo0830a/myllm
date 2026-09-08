@@ -22,7 +22,7 @@ load_model_env "$MODEL_SLUG"
 LLAMA_SERVER="${LLAMA_SERVER:-${HOME}/llama.cpp/llama-server}"
 # Resolve GGUF path using the helper function from lib.sh
 GGUF="$(model_gguf_path)"
-PORT="${MISTRAL_PORT:-8082}"
+PORT="${MISTRAL_PORT:-8081}"
 CTX="${MISTRAL_CTX:-65536}"
 THREADS="${MISTRAL_THREADS:-8}"
 ALIAS="${MISTRAL_ALIAS:-mistral-large}"
