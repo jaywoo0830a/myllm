@@ -1,0 +1,21 @@
+[Unit]
+Description=myLLM diffuse-cpp OpenAI server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory={{SCRIPT_DIR}}
+Environment="LD_LIBRARY_PATH={{HOME}}/diffuse-cpp/build:{{HOME}}/diffuse-cpp/build/ggml/src"
+ExecStart=/usr/bin/env bash {{SCRIPT_DIR}}/diffuse_serve.sh %i
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=180
+TimeoutStopSec=60
+NoNewPrivileges=true
+# diffusion 은 매 요청 diffuse-cli(gpu 없이 CPU) 를 띄운다 — 오픈파일/프로세스 허용
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
