@@ -20,8 +20,11 @@ fi
 # -----------------------------------------------------------------
 # 2) Start a fresh instance (detached)
 # -----------------------------------------------------------------
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+UP_SCRIPT="${SCRIPT_DIR}/up.sh"
+
 echo "🟢 Starting Mistral server (model: mistral-large)…"
-bash up.sh mistral-large
+bash "$UP_SCRIPT" mistral-large
 
 # -----------------------------------------------------------------
 # 3) Wait a moment for the server to bind the port
@@ -32,7 +35,7 @@ sleep 5
 # 4) Health‑check
 # -----------------------------------------------------------------
 echo "🔎 Testing server endpoint …"
-if bash test_server.sh mistral-large; then
+if bash "$SCRIPT_DIR/test_server.sh" mistral-large; then
     echo "✅ Server is up and responding."
 else
     echo "❌ Server test failed – see logs in run/*.log"
