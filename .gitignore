@@ -10,3 +10,11 @@ server/output/
 # macOS / misc
 .DS_Store
 *.swp
+
+# ──────────────────────────────────────────────────────────────
+# Server runtime files (logs, pid, temporary data)
+# ──────────────────────────────────────────────────────────────
+run/
+*.log
+*.pid
+
