@@ -36,6 +36,24 @@ MODEL_REGISTRY = {
         "role": "심화 추론가",
         "instances": 1,
     },
+    "setter": {
+        "slug": "setter",
+        "model_name": "Qwen2.5-14B-Instruct",
+        "quant": "Q5_K_M",
+        "size_gb": 11,
+        "role": "문제 생성기",
+        "instances": 1,
+        "on_demand": True,  # 14B — 다른 모델 내리고 단독 로드 (PLAN 동시로딩 전략)
+    },
+    "judge": {
+        "slug": "judge",
+        "model_name": "DeepSeek-R1-Distill-Qwen-14B",
+        "quant": "Q5_K_M",
+        "size_gb": 11,
+        "role": "판사",
+        "instances": 1,
+        "on_demand": True,  # 14B — GBNF 로 {ok,code} 초경량 출력, 단독 로드
+    },
     "embedding": {
         "slug": "embedding",
         "model_name": "bge-small-en-v1.5",
