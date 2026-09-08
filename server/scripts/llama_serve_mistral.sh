@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ============================================================
 # llama_serve_mistral.sh
-#   Mistral-Small-24B-Instruct-2501 (LLAMA arch GGUF, autoregressive) 를
-#   llama-server 로 OpenAI 호환 8081 상시 서빙.
+#   Mistral-Small-24B-Instruct-2501 (LLAMA architecture GGUF, autoregressive) model
+#   Serves via llama-server as OpenAI-compatible on port 8081 continuously.
 #
-#   - autoregressive dense 24B → llama-server 로 구동 (일관성 우선 단일 백엔드)
+#   - autoregressive dense 24B → runs on llama-server (single backend prioritized for consistency)
 #   - GGUF: bartowski Mistral-Small-24B-Instruct-2501 Q4_K_M (arch=llama)
-#   - ctx: 65536 (64k, 긴 교재용 창; RAM 여유까지만)
+#   - ctx: 65536 (64k, long textbook window; limited by RAM availability)
 #
-# 실행(systemd 사용 권장):
+# Execution (systemd recommended):
 #   ExecStart=/usr/bin/env bash llama_serve_mistral.sh
 # ============================================================
 set -euo pipefail
@@ -20,10 +20,12 @@ CTX="${MISTRAL_CTX:-65536}"
 THREADS="${MISTRAL_THREADS:-8}"
 ALIAS="${MISTRAL_ALIAS:-mistral-large}"
 
-[[ -x "$LLAMA_SERVER" ]] || { echo "[!!] $LLAMA_SERVER 없음" >&2; exit 2; }
-[[ -f "$GGUF" ]] || { echo "[!!] GGUF 없음: $GGUF" >&2; exit 2; }
+[[ -x "$LLAMA_SERVER" ]] || { echo "[!!] $LLAMA_SERVER missing" >&2; exit 2; }
+[[ -f "$GGUF" ]] || { echo "[!!] GGUF missing: $GGUF" >&2; exit 2; }
 
 echo "==> llama-server: $ALIAS / $GGUF ctx=$CTX port=$PORT" >&2
+# Tuning parameters (already set via environment)
+# THREADS defaults to 8, KV_CACHE defaults to "q8_0" for best throughput on 9700X
 exec "$LLAMA_SERVER" \
   -m "$GGUF" \
   --alias "$ALIAS" \
