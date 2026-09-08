@@ -43,8 +43,9 @@ load_model_env() {
     echo "    Note: cp server/config/models/${slug}.env.example $f" >&2
     exit 1
   fi
-  # shellcheck disable=SC1090
-  source "$f"
+# shellcheck disable=SC1090
+# Source the environment file while stripping possible Windows CR characters
+source <(tr -d '\r' < "$f")
   # Required validation
   : "${MODEL_NAME:?missing: MODEL_NAME}"
   : "${ALIAS:?missing: ALIAS}"
