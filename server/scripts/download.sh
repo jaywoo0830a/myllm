@@ -17,6 +17,8 @@ load_model_env "$MODEL_SLUG" >/dev/null
 
 # Resolve target path for the GGUF file
 TARGET_PATH="$(model_gguf_path)"
+# Ensure target directory exists
+mkdir -p "$(dirname "$TARGET_PATH")"
 
 # If the file already exists, skip download
 if [[ -f "$TARGET_PATH" ]]; then
@@ -31,19 +33,21 @@ DOWNLOAD_URL="https://huggingface.co/${HF_REPO}/resolve/main/${MODEL_FILE}"
 echo "Downloading $MODEL_FILE from $HF_REPO ..."
 # Use aria2c if available for faster parallel download, otherwise curl
 if command -v aria2c >/dev/null 2>&1; then
-  # If a token is needed, pass it via the Authorization header
+  # Parallel download with aria2c – number of connections can be tuned via HF_DL_THREADS (default 8)
+  PARALLEL="${HF_DL_THREADS:-8}"
   HF_TOKEN="$(resolve_hf_token)"
   if [[ -n "$HF_TOKEN" ]]; then
-    aria2c --header="Authorization: Bearer $HF_TOKEN" -x 8 -s 8 -k 1M "$DOWNLOAD_URL" -d "$(dirname "$TARGET_PATH")" -o "$(basename "$TARGET_PATH")"
+    aria2c --header="Authorization: Bearer $HF_TOKEN" -x "$PARALLEL" -s "$PARALLEL" -k 1M -c "$DOWNLOAD_URL" -d "$(dirname "$TARGET_PATH")" -o "$(basename "$TARGET_PATH")"
   else
-    aria2c -x 8 -s 8 -k 1M "$DOWNLOAD_URL" -d "$(dirname "$TARGET_PATH")" -o "$(basename "$TARGET_PATH")"
+    aria2c -x "$PARALLEL" -s "$PARALLEL" -k 1M -c "$DOWNLOAD_URL" -d "$(dirname "$TARGET_PATH")" -o "$(basename "$TARGET_PATH")"
   fi
 else
+  # Fallback to curl – use resume support (-C -) and optional token header
   HF_TOKEN="$(resolve_hf_token)"
   if [[ -n "$HF_TOKEN" ]]; then
-    curl -L -H "Authorization: Bearer $HF_TOKEN" "$DOWNLOAD_URL" -o "$TARGET_PATH"
+    curl -L -H "Authorization: Bearer $HF_TOKEN" -C - "$DOWNLOAD_URL" -o "$TARGET_PATH"
   else
-    curl -L "$DOWNLOAD_URL" -o "$TARGET_PATH"
+    curl -L -C - "$DOWNLOAD_URL" -o "$TARGET_PATH"
   fi
 fi
 
