@@ -33,7 +33,7 @@ git fetch --all && git reset --hard origin/master
 mkdir -p build && cd build
 
 # Configure with CMake – enable the server and AVX‑512 if supported
-cmake .. -DLLAMA_SERVER=ON -DLLAMA_AVX512=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-march=znver3 -mtune=znver3 -O3 -ffast-math -funroll-loops -fno-finite-math-only" -DCMAKE_CXX_FLAGS="-march=znver3 -mtune=znver3 -O3 -ffast-math -funroll-loops -fno-finite-math-only"
+cmake .. -DLLAMA_SERVER=ON -DLLAMA_AVX512=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-march=native -mtune=native -O3 -ffast-math -funroll-loops -fno-finite-math-only" -DCMAKE_CXX_FLAGS="-march=native -mtune=native -O3 -ffast-math -funroll-loops -fno-finite-math-only"
 
 # Build all targets (llama-server, ggml, etc.)
 make -j$(nproc)
