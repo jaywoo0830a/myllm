@@ -14,7 +14,7 @@ git clone <repo‑url> myllm && cd myllm/server
 cp config/env.example config/env
 cp config/models/mistral-large.env.example config/models/mistral-large.env
 bash scripts/setup_llamacpp.sh          # build llama‑server with AVX‑512 optimisations
-bash scripts/download.sh mistral-large    # download GGUF
+bash scripts/download.sh mistral-large    # download GGUF (~16 GB)
 bash scripts/up.sh mistral-large          # starts server with tuned THREADS=8 & KV_CACHE=q8_0
 bash scripts/test_server.sh mistral-large
 ```

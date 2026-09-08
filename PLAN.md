@@ -13,6 +13,8 @@ Serve the Mistral‑Small‑24B‑Instruct‑2501 model on a bare‑metal CPU se
 - [x] Translate all scripts to English and remove Korean text.
 - [x] Remove unused scripts (install, download, run_one, run_all, overnight_gen, etc.).
 - [x] Update documentation (README, server/README, PLAN) to reflect Mistral‑only setup and embed tuning.
+- [x] Add missing model env and example (`mistral-large.env.example` / `mistral-large.env`).
+- [x] Provide `download.sh` and `test_server.sh` helpers.
 - [x] Verify no references to other models remain.
 - [ ] Test end‑to‑end: start server, run `test_server.sh`, configure VS Code Continue, generate a sample completion.
 
