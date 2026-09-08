@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# 01_setup_llamacpp.sh
+# setup_llamacpp.sh
 #   베어메탈 서버(Ubuntu)에서 llama.cpp 를 빌드한다.
 #   - Zen5(9700X)용 AVX-512 빌드
 #   - 최신 master 빌드 (기능/보안 최신)
@@ -8,7 +8,7 @@
 #
 # 사용법:
 #   source ../config/env          # (env.example -> env 복사 후)
-#   bash 01_setup_llamacpp.sh
+#   bash setup_llamacpp.sh
 # ============================================================
 set -euo pipefail
 

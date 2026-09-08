@@ -41,10 +41,10 @@
 
 ## 구성 요소 / 산출물 (이 레포에 정리)
 - **server/scripts/**
-  - `lib.sh` 공통 헬퍼, `01_setup_llamacpp.sh` 빌드
+  - `lib.sh` 공통 헬퍼, `setup_llamacpp.sh` 빌드
   - `download.sh <slug>` GGUF 다운로드, `run_one.sh <slug>` 서버 실행
   - `run_all.sh` 백그라운드 테스트, `test_server.sh <slug>` 스모크
-  - `install_models.sh` systemd 템플릿 등록, `06_set_hf_token.sh` 토큰
+  - `install_models.sh` systemd 템플릿 등록, `set_hf_token.sh` 토큰
   - `overnight_gen.sh` 밤샘 장문 생성(파일 저장)
 - **server/config/models/deepseek-r1-14b.env(.example)** 모델 프로파일 (단일)
 - **server/systemd/myllm-llama@.service** systemd 템플릿

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# 06_set_hf_token.sh
+# set_hf_token.sh
 #   HuggingFace Read 토큰을 server/config/hf_token 에 저장한다.
 #   - hf_token 은 .gitignore 대상 -> git 에 커밋/푸시되지 않음 (비밀 보호)
 #   - `read -s` 로 입력받아 터미널 히스토리/화면에 노출하지 않는다.
@@ -8,7 +8,7 @@
 # 토큰 생성: https://huggingface.co/settings/tokens -> "Read" 권한
 #
 # 사용법:
-#   bash 06_set_hf_token.sh
+#   bash set_hf_token.sh
 #   # 입력 프롬프트에 토큰을 붙여넣고 Enter
 # ============================================================
 set -euo pipefail

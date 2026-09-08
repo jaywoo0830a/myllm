@@ -21,8 +21,8 @@ myllm/
 │   │       └── deepseek-r1-14b.env.example
 │   ├── scripts/
 │   │   ├── lib.sh               #   공통 헬퍼 (env 로드/토큰/경로)
-│   │   ├── 01_setup_llamacpp.sh #   llama.cpp 빌드 (AVX-512, master)
-│   │   ├── 06_set_hf_token.sh   #   HF Read 토큰 저장 (gitignore)
+│   │   ├── setup_llamacpp.sh    #   llama.cpp 빌드 (AVX-512, master)
+│   │   ├── set_hf_token.sh      #   HF Read 토큰 저장 (gitignore)
 │   │   ├── download.sh <slug>   #   GGUF 다운로드(토큰/이어받기)
 │   │   ├── run_one.sh <slug>    #   llama-server (테스트/수동)
 │   │   ├── run_all.sh           #   활성 모델 백그라운드(테스트용)
@@ -56,8 +56,8 @@ cp config/models/deepseek-r1-14b.env.example config/models/deepseek-r1-14b.env
 #    (포트/스레드/ctx/KV_CACHE 등 편집 가능)
 
 # 2) 빌드 + 토큰 + 다운로드
-bash scripts/01_setup_llamacpp.sh          # llama.cpp 빌드
-bash scripts/06_set_hf_token.sh            # (선택) HF Read 토큰
+bash scripts/setup_llamacpp.sh          # llama.cpp 빌드
+bash scripts/set_hf_token.sh            # (선택) HF Read 토큰
 bash scripts/download.sh deepseek-r1-14b   # ~8.9GB
 
 # 3) 테스트 실행 (백그라운드)

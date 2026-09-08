@@ -30,7 +30,7 @@ if [[ -n "$HF_TOKEN" ]]; then
   AUTH_HEADER=(-H "Authorization: Bearer $HF_TOKEN")
   echo "==> HF 토큰 사용 (인증 다운로드)"
 else
-  echo "==> HF 토큰 없음. 속도 개선 원하면 06_set_hf_token.sh 실행."
+  echo "==> HF 토큰 없음. 속도 개선 원하면 set_hf_token.sh 실행."
 fi
 
 URL="https://huggingface.co/${HF_REPO}/resolve/main/${MODEL_FILE}"

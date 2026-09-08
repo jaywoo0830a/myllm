@@ -25,7 +25,7 @@ load_model_env "$SLUG"     # MODEL_NAME/ALIAS/HF_REPO/MODEL_FILE/LLAMA_PORT/CTX_
 BIN="$LLAMA_CPP_DIR/llama-server"
 MODEL="$(model_gguf_path)"
 
-[[ -x "$BIN" ]] || { echo "[!!] llama-server 없음: $BIN   (01_setup_llamacpp.sh 실행)" >&2; exit 1; }
+[[ -x "$BIN" ]] || { echo "[!!] llama-server 없음: $BIN   (setup_llamacpp.sh 실행)" >&2; exit 1; }
 if [[ ! -f "$MODEL" ]]; then
   echo "[!!] 모델 없음: $MODEL" >&2
   echo "    →  download.sh $SLUG  실행 필요" >&2

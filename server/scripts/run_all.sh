@@ -64,7 +64,7 @@ for s in "${SLUGS[@]}"; do
   load_model_env "$s" >/dev/null
   BIN="$LLAMA_CPP_DIR/llama-server"
   MODEL="$(model_gguf_path)"
-  [[ -x "$BIN" ]] || { echo "[!!] llama-server 없음. 01_setup_llamacpp.sh" >&2; exit 1; }
+  [[ -x "$BIN" ]] || { echo "[!!] llama-server 없음. setup_llamacpp.sh" >&2; exit 1; }
   if [[ ! -f "$MODEL" ]]; then
     if [[ $WANT_DL -eq 1 ]]; then
       echo "==> [${s}] 다운로드 시작"

@@ -40,7 +40,7 @@ nano config/models/deepseek-r1-14b.env       # 포트/스레드/ctx/양자화 �
 ## 1) llama.cpp 빌드 (master)
 
 ```bash
-bash scripts/01_setup_llamacpp.sh     # AVX-512, master 클론/업데이트+빌드
+bash scripts/setup_llamacpp.sh     # AVX-512, master 클론/업데이트+빌드
 ```
 
 ---
@@ -49,7 +49,7 @@ bash scripts/01_setup_llamacpp.sh     # AVX-512, master 클론/업데이트+빌�
 
 HF Read 토큰(선택, 속도·인증 개선):
 ```bash
-bash scripts/06_set_hf_token.sh
+bash scripts/set_hf_token.sh
 ```
 병렬 분할(선택): `sudo apt install -y aria2` 후 `config/env` 의 `HF_DL_THREADS=4~8`.
 
@@ -145,7 +145,7 @@ hostname -I
 
 | 증상 | 대응 |
 |------|------|
-| 모델 로드 실패/arch 오류 | llama.cpp 구버전 → `01_setup_llamacpp.sh` 재실행(master) |
+| 모델 로드 실패/arch 오류 | llama.cpp 구버전 → `setup_llamacpp.sh` 재실행(master) |
 | 응답에 장문 chain-of-thought | R1 특성상 억제 불가. 로그로 진행 상태 확인 |
 | 포트 못 잡음 | `run_all.sh --status`, `ss -ltnp 8081` 로 프로세스 확인 |
 | 느림(정상) | 14B dense CPU = ~6-7 t/s. KV_CACHE q8_0 로 소폭 개선 시도 |
