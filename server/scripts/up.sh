@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
 MODEL_SLUG="${1:-mistral-large}"
+export MODEL_SLUG
 load_base_env
 load_model_env "$MODEL_SLUG" >/dev/null
 # Tuning parameters for optimal performance on AMD 9700X + DDR5 64 GB
