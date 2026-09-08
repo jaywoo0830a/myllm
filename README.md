@@ -5,7 +5,7 @@ This repository now implements the **multi‑agent architecture** described in `
 | Role | Model | Approx. Size | Instances |
 |------|-------|--------------|-----------|
 | **Parser** | Qwen2.5‑7B‑Instruct (Q4_K_M) | ~5 GB | 1 |
-| **Worker** | Phi‑3.5‑mini‑instruct (3.8 B) | ~3 GB | 3‑4 |
+| **Worker** | Qwen2.5‑7B‑Instruct (Q4_K_M) | ~5 GB | 4 |
 | **Coder** | Qwen2.5‑Coder‑7B‑Instruct (Q4_K_M) | ~5 GB | 2 |
 | **Reasoner** | DeepSeek‑R1‑Distill‑Qwen‑7B | ~5 GB | 1 |
 | **Embedding** | bge‑small‑en‑v1.5 | ~0.5 GB | 1 (always loaded) |

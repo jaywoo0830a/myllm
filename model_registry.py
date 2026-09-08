@@ -15,8 +15,9 @@ MODEL_REGISTRY = {
     },
     "worker": {
         "slug": "worker",
-        "model_name": "Phi-3.5-mini-instruct",
-        "size_gb": 3,
+        "model_name": "Qwen2.5-7B-Instruct",
+        "quant": "Q4_K_M",
+        "size_gb": 5,
         "role": "논리 일꾼",
         "instances": 4,  # up to 4 workers as needed
     },
@@ -26,7 +27,7 @@ MODEL_REGISTRY = {
         "quant": "Q4_K_M",
         "size_gb": 5,
         "role": "코딩 일꾼",
-        "instances": 2,
+        "instances": 4,
     },
     "reasoner": {
         "slug": "reasoner",

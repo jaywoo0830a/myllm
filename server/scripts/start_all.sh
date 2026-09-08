@@ -19,6 +19,8 @@ SLUGS=(
     worker4
     coder1
     coder2
+    coder3
+    coder4
     reasoner
 )
 

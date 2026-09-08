@@ -36,8 +36,8 @@
 | 역할 | 모델 | 크기 | 용도 |
 |------|------|------|------|
 | **작업 분배 Parser** | Qwen2.5-7B-Instruct (Q4_K_M) | ~5GB | 사용자 계획서를 JSON 티켓으로 변환 |
-| **논리 일꾼 (Worker)** | Phi-3.5-mini-instruct (3.8B) × 3~4 | 각 ~3GB | 수식 분석, 코드 버그 추적, 요약 |
-| **코딩 일꾼** | Qwen2.5-Coder-7B-Instruct (Q4_K_M) × 2 | 각 ~5GB | 코드 수정, 생성, 리뷰 |
+| **논리 일꾼 (Worker)** | Qwen2.5-7B-Instruct (Q4_K_M) × 4 | 각 ~5GB | 수식 분석, 코드 버그 추적, 요약 |
+| **코딩 일꾼** | Qwen2.5-Coder-7B-Instruct (Q4_K_M) × 4 | 각 ~5GB | 코드 수정, 생성, 리뷰 |
 | **심화 추론가** | DeepSeek-R1-Distill-Qwen-7B | ~5GB | 수학적 증명, 복잡한 논리 검증 (필요 시 로드) |
 | **임베딩 모델** | bge-small-en-v1.5 | ~0.5GB | 질문/문서 벡터화 (상시 대기) |
 
@@ -168,7 +168,7 @@ Provide minimal patch for the divergence.
 ## 10. 구축을 위한 To-Do (요약)
 
 1. **환경 구축:** Docker, Ollama/llama.cpp 설치, Ubuntu 설정.
-2. **모델 다운로드:** Phi-3.5, Qwen2.5-7B/Coder, DeepSeek-R1-Distill, bge-small.
+2. **모델 다운로드:** Qwen2.5-7B/Coder, DeepSeek-R1-Distill, bge-small.
 3. **RAG 파이프라인 코딩:** 문서/코드 청킹, 임베딩, FAISS/ChromaDB 저장 스크립트 작성.
 4. **오케스트레이터 개발:** FastAPI + Parser 로직 + 병렬 실행 코드.
 5. **UI 연결:** 간단한 웹 UI (또는 터미널) 부착.
