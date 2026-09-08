@@ -43,7 +43,7 @@ fi
 # -----------------------------------------------------------------
 # Start the server in background, capture stdout+stderr to log
 # -----------------------------------------------------------------
-nohup "${SCRIPT_DIR}/llama_serve_mistral.sh" &> "${LOG_FILE}" &
+nohup "${SCRIPT_DIR}/llama_serve_generic.sh" &> "${LOG_FILE}" &
 SERVER_PID=$!
 
 # Give the process a moment to start and write its PID file
@@ -56,6 +56,6 @@ fi
 # Record PID atomically
 printf "%s\n" "${SERVER_PID}" > "${PID_FILE}"
 
-echo "✅ Mistral server started (PID ${SERVER_PID}) for model ${MODEL_SLUG}"
+echo "✅ Model server started (PID ${SERVER_PID}) for model ${MODEL_SLUG}"
 echo "🗒️ Log file: ${LOG_FILE}"
 

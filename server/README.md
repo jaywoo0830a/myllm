@@ -1,6 +1,6 @@
 # myLLM – Bare‑metal server setup guide
 
-The scripts in this directory start a Mistral‑Small‑24B‑Instruct‑2501 model using `llama.cpp`'s `llama‑server`. The server exposes an OpenAI‑compatible API on port 8081.
+The scripts in this directory start **any** model defined in `server/config/models/*.env` using `llama.cpp`'s `llama‑server`. Each model runs on its own port and can be started independently.
 
 ## Prerequisites
 
@@ -13,17 +13,21 @@ The scripts in this directory start a Mistral‑Small‑24B‑Instruct‑2501 mo
 ```bash
 git clone <repo‑url> myllm && cd myllm/server
 cp config/env.example config/env
-cp config/models/mistral-large.env.example config/models/mistral-large.env
+# Copy the example env for each model you want to run (e.g., parser, worker1, coder1, etc.)
+# Example for the parser model:
+cp config/models/parser.env.example config/models/parser.env
+# Build llama‑cpp server
 bash scripts/setup_llamacpp.sh          # builds with -march=znver3 and AVX‑512
-bash scripts/download.sh mistral-large    # download GGUF (~16 GB)
-bash scripts/up.sh mistral-large          # starts server with THREADS=8 & KV_CACHE=q8_0
-bash scripts/test_server.sh mistral-large
+# Download the model GGUF files (replace <model> with the slug, e.g., parser)
+bash scripts/download.sh parser
+# Start the model server
+bash scripts/up.sh parser
 ```
 
 ## Helper scripts (tuned)
 
 - `init.sh` – creates output directory, loads env, sets `THREADS=8` and `KV_CACHE="q8_0"`.
-- `up.sh` – starts the server in background with the same tuning.
+- `up.sh` – starts the server in background with the same tuning variables.
 - `down.sh` – stops the server.
 - `log.sh` – view recent logs.
 
@@ -32,14 +36,16 @@ All scripts are in English and contain no Korean text.
 ## Systemd service (optional)
 
 ```bash
-bash scripts/install_models.sh   # enable and start systemd unit
-sudo systemctl enable --now myllm-llama@mistral-large
+bash scripts/install_models.sh   # enable and start systemd unit for all configured models
+sudo systemctl enable --now myllm-llama@.service
 ```
 
 ## Firewall
 
+Open the ports for the models you plan to run (e.g., 8081‑8088).
+
 ```bash
-sudo ufw allow 8081/tcp
+sudo ufw allow 8081:8088/tcp
 ```
 
 ## Performance tuning
