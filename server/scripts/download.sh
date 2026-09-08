@@ -31,7 +31,7 @@ fi
 DOWNLOAD_URL="https://huggingface.co/${HF_REPO}/resolve/main/${MODEL_FILE}"
 
 echo "Downloading $MODEL_FILE from $HF_REPO ..."
-# Use aria2c if available for faster parallel download, otherwise curl
+# Choose downloader: aria2c > curl > error
 if command -v aria2c >/dev/null 2>&1; then
   # Parallel download with aria2c – number of connections can be tuned via HF_DL_THREADS (default 8)
   PARALLEL="${HF_DL_THREADS:-8}"
@@ -41,7 +41,7 @@ if command -v aria2c >/dev/null 2>&1; then
   else
     aria2c -x "$PARALLEL" -s "$PARALLEL" -k 1M -c "$DOWNLOAD_URL" -d "$(dirname "$TARGET_PATH")" -o "$(basename "$TARGET_PATH")"
   fi
-else
+elif command -v curl >/dev/null 2>&1; then
   # Fallback to curl – use resume support (-C -) and optional token header
   HF_TOKEN="$(resolve_hf_token)"
   if [[ -n "$HF_TOKEN" ]]; then
@@ -49,6 +49,9 @@ else
   else
     curl -L -C - "$DOWNLOAD_URL" -o "$TARGET_PATH"
   fi
+else
+  echo "❌ Neither aria2c nor curl is installed. Please install one of them to download models." >&2
+  exit 1
 fi
 
 echo "Download complete: $TARGET_PATH"
