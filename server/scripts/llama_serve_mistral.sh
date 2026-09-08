@@ -22,7 +22,7 @@ load_model_env "$MODEL_SLUG"
 LLAMA_SERVER="${LLAMA_SERVER:-${HOME}/llama.cpp/llama-server}"
 # Resolve GGUF path using the helper function from lib.sh
 GGUF="$(model_gguf_path)"
-PORT="${MISTRAL_PORT:-8081}"
+PORT="${MISTRAL_PORT:-8082}"
 CTX="${MISTRAL_CTX:-65536}"
 THREADS="${MISTRAL_THREADS:-8}"
 ALIAS="${MISTRAL_ALIAS:-mistral-large}"
@@ -33,6 +33,8 @@ ALIAS="${MISTRAL_ALIAS:-mistral-large}"
 echo "==> llama-server: $ALIAS / $GGUF ctx=$CTX port=$PORT" >&2
 # Tuning parameters (already set via environment)
 # THREADS defaults to 8, KV_CACHE defaults to "q8_0" for best throughput on 9700X
+export OMP_NUM_THREADS=$THREADS
+export KMP_AFFINITY=granularity=fine,compact,1,0
 exec "$LLAMA_SERVER" \
   -m "$GGUF" \
   --alias "$ALIAS" \

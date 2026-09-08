@@ -19,30 +19,17 @@ schema: v1
 #   curl http://<서버IP>:8081/v1/models
 # ============================================================
 models:
-  - name: DeepSeek-R1 14B (로컬)
+  - name: Mistral-Small-24B-Instruct-2501 (로컬)
     provider: openai
-    model: deepseek-r1-14b
-    apiBase: http://<서버IP>:8081/v1
+    model: mistral-large
+    apiBase: http://<서버IP>:8082/v1
     apiKey: none
-    # R1 reasoning 모델: 항상 <think> 먼저 출력 -> edit/apply(정확한 diff)엔 부적합.
-    #   (edit/apply 를 시험해보고 싶으면 roles 주석 해제)
     roles:
       - chat
-      # - edit
-      # - apply
     defaultCompletionOptions:
-      contextLength: 16384    # llama-server --ctx-size 와 맞출 것
+      contextLength: 32768    # llama-server --ctx-size 와 맞출 것
       maxTokens: 4096
       temperature: 0.6
     autocompleteOptions:
       disable: true
 
-# 참고: 탭 자동완성용 별도 FIM 모델을 추가하려면
-# 아래처럼 roles 를 [autocomplete] 로 지정한 항목을 따로 넣는다.
-#   - name: Tab Autocomplete
-#     provider: openai
-#     model: <fim-model-id>
-#     apiBase: http://<서버IP>:8081/v1
-#     apiKey: none
-#     roles:
-#       - autocomplete
