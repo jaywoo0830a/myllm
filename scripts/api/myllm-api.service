@@ -5,14 +5,26 @@
 #   API 서버. "호스트 프로세스"로 띄우므로 up/down/start_heavy 가
 #   실제 llama-server PID 를 제어할 수 있다. (컨테이너와 달리)
 #
-#   설치 (저장소 루에서):
+#   설치 (저장소 루에서 — {{SCRIPT_DIR}} 은 반드시 실제 저장소 절대경로로 바꿀 것):
+#     cd /실제/저장소/경로        # 예: ~/projects/myllm → /home/<user>/projects/myllm
+#     REPO=$(pwd)                 # 위 cd 후 pwd 가 진짜 경로다
+#
+#     # 0) venv 준비 (권장 — 우분투 PEP668 이라 시스템 pip 가 막힘):
+#     python3 -m venv .venv
+#     .venv/bin/pip install -r scripts/api/requirements.txt
+#
 #     sudo cp scripts/api/myllm-api.service /etc/systemd/system/
 #     sudo sed -i -e "s|{{USER}}|$USER|" \
-#                 -e "s|{{SCRIPT_DIR}}|/절대경로/myllm|" \
+#                 -e "s|{{SCRIPT_DIR}}|$REPO|" \
 #                 /etc/systemd/system/myllm-api.service
-#     # (선택) 토큰 주입 — 아래 Environment= 주석 해제 후 값 입력
+#     # (보안) 토큰 주입 — 아래 Environment= 주석 해제 후 값 입력
 #     sudo systemctl daemon-reload
 #     sudo systemctl enable --now myllm-api
+#
+#   ⚠ CHDIR 실패(exit 200) 시: {{SCRIPT_DIR}} 을 /srv/myllm 같은 "예시 경로"로 두지 말고
+#     실제 저장소 절대경로로 치환했는지 확인하라.
+#   ⚠ 'No module named uvicorn' 시: .venv 를 만들고 의존성을 설치했는지 확인하라.
+#     (run_local.sh 가 .venv/bin/python 을 자동으로 쓴다)
 #
 #   관리:
 #     systemctl status myllm-api

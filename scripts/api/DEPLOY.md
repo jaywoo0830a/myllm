@@ -20,16 +20,24 @@
 
 ---
 
-## 1. 호스트 파이썬 의존성 설치 (1회)
+## 1. 호스트 파이썬 의존성 설치 (1회) — venv 사용 (PEP668 대응)
 
-> API 를 **호스트에서** 실행하므로 호스트의 python3 에 fastapi/uvicorn 을 깐다.
-> (도커 이미지에는 이미 들어 있지만, 위 목적상 호스트 파이썬이 필요하다.)
+> API 를 **호스트에서** 실행하므로 호스트 파이썬이 필요하다.
+> 우분투(python3.12 ~ 3.14)는 **PEP668(externally-managed)** 으로 시스템 `pip install` 이
+> 차단된다. → 반드시 **venv(.venv)** 를 쓰고, `run_local.sh` 가 이를 자동 사용한다.
 
 ```bash
-cd /srv/myllm
-pip install -r scripts/api/requirements.txt
-# 또는: python3 -m pip install 'fastapi>=0.110' 'uvicorn[standard]>=0.23' 'pydantic>=2'
+cd /home/ubuntu/projects/myllm          # 실제 저장소 위치
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -r scripts/api/requirements.txt
+
+# 확인 (OK 가 나와야 함):
+.venv/bin/python -c "import uvicorn, fastapi; print('OK', uvicorn.__version__)"
 ```
+
+> `run_local.sh` 는 `.venv/bin/python` 이 있으면 자동으로 그것을 사용하고,
+> 없으면 시스템 python3 로 폴백한다 (로컬 테스트 시 편리).
 
 ---
 
@@ -51,26 +59,53 @@ curl -s http://localhost:18080/health
 ## 3. systemd 로 호스트에서 상시 서비스 등록 (본 목적)
 
 > 모델 제어(up/down/start_heavy)가 목적이므로 **호스트에서** 실행한다.
+> ⚠ 아래는 **반드시 실제 저장소 경로**(`pwd`)로 치환한다. `/srv/myllm` 은 그대로 쓰면 오류.
 
 저장소의 unit 템플릿을 설치하고 경로/사용자를 치환한다.
 
 ```bash
-cd /srv/myllm
+# 먼저 실제 저장소 위치를 확인하라
+cd ~/projects/myllm            # 여러분의 실제 저장소
+REAL_PATH="$(pwd)"
+
 sudo cp scripts/api/myllm-api.service /etc/systemd/system/
 
 sudo sed -i \
   -e "s|{{USER}}|$(whoami)|" \
-  -e "s|{{SCRIPT_DIR}}|/srv/myllm|" \
+  -e "s|{{SCRIPT_DIR}}|$REAL_PATH|" \
   /etc/systemd/system/myllm-api.service
 
 # [보안 필수] 토큰 설정 (주석을 풀고 강한 값으로 교체)
+TOK="$(openssl rand -hex 24)"
 sudo sed -i \
-  's|^# Environment=EXTERNAL_TOKEN=CHANGE_ME_STRONG_SECRET|Environment=EXTERNAL_TOKEN='"$(echo -n "$(hostname)-$(date +%s)" | base64 | head -c32)"'|' \
+  "s|^# Environment=EXTERNAL_TOKEN=CHANGE_ME_STRONG_SECRET|Environment=EXTERNAL_TOKEN=$TOK|" \
   /etc/systemd/system/myllm-api.service
 
 sudo systemctl daemon-reload
 sudo systemctl enable --now myllm-api
 systemctl status myllm-api --no-pager
+```
+
+> **실행 방식**: unit 의 `ExecStart` 는 `.../run_local.sh 18080` 이며, 이 스크립트가
+> `.venv/bin/python` 을 자동으로 골라 uvicorn 을 띄운다. venv 가 없으면 시스템 python3 로
+> 폴백하므로(그때 `No module named uvicorn`), 반드시 §1 의 venv 설지가 선행되어야 한다.
+
+**`CHDIR` 실패(`status=200/CHDIR`)를 본다면** — `{{SCRIPT_DIR}}` 이 실제 저장소가 아닌
+예시 경로(`/srv/myllm`)로 남아 있어서다. 실제 경로로 다시 고치고 재시작:
+
+```bash
+REAL_PATH="$HOME/projects/myllm"        # ← pwd 로 확인한 실제 경로
+sudo sed -i "s|/srv/myllm|$REAL_PATH|g; s|{{SCRIPT_DIR}}|$REAL_PATH|g" /etc/systemd/system/myllm-api.service
+sudo systemctl daemon-reload && sudo systemctl restart myllm-api
+systemctl status myllm-api --no-pager
+```
+
+**`No module named uvicorn` 으로 계속 재시작한다면** — venv 가 없거나 의존성이 안 깔림:
+```bash
+cd "$HOME/projects/myllm"
+python3 -m venv .venv
+.venv/bin/pip install -r scripts/api/requirements.txt
+sudo systemctl restart myllm-api
 ```
 
 관리 명령:
