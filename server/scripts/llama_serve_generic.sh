@@ -7,9 +7,22 @@
 #   starts `llama‑server` with the appropriate arguments.
 # ============================================================
 set -euo pipefail
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}" )" && pwd)"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/lib.sh"
+
+# ---------------------------------------------------------------------------
+# 이 파일은 내부 헬퍼다. (up.sh 가 MODEL_SLUG 을 설정하고 호출한다)
+# MODEL_SLUG 없이 직접 실행하면 안 된다 — 사용법 안내 후 종료.
+# ---------------------------------------------------------------------------
+if [[ -z "${MODEL_SLUG:-}" ]]; then
+  echo "[!!] llama_serve_generic.sh 는 직접 실행하지 마세요." >&2
+  echo "     이 스크립트는 up.sh 가 내부에서 호출하는 헬퍼입니다." >&2
+  echo "     올바른 사용법:" >&2
+  echo "       bash server/scripts/up.sh <model_slug>" >&2
+  echo "     (예: parser, worker1, coder1, reasoner, setter, judge)" >&2
+  exit 3
+fi
 
 # Load base and model environments (MODEL_SLUG should be set by the caller)
 load_base_env
