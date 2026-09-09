@@ -52,7 +52,8 @@ cp llama-server /path/to/myllm/server/scripts/
 ## 3. KV‑Cache quantisation
 
 모델 가중치는 Q4/Q5 이므로 KV 캐시를 `q8_0` 으로 양자화하면 속도+메모리를 함께 잡는다.
-`llama_serve_generic.sh` 가 `--cache-type k:q8_0,v:q8_0` 로 실제 반영한다.
+`llama_serve_generic.sh` 가 `--cache-type-k q8_0 --cache-type-v q8_0` 로 실제 반영한다.
+(build 10858+ 는 옛 통합 `--cache-type "k:...,v:..."` 플래그가 제거되어 K/V 를 각각 별도로 준다.)
 
 - 7B @ ctx 16K ≈ 0.9 GB(FP16) → q8_0 로 **~0.45 GB**
 - 14B 판사/세터: CTR 축소(8K) + q8_0 로 KV 할당을 크게 절감
