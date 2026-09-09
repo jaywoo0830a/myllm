@@ -1,0 +1,46 @@
+# ============================================================
+# myllm-api.service  --  Script Runner API (FastAPI, 포트 18080)
+#
+#   제3자(내부 서비스)가 server/scripts/*.sh 를 HTTP 로 실행하게 하는
+#   API 서버. "호스트 프로세스"로 띄우므로 up/down/start_heavy 가
+#   실제 llama-server PID 를 제어할 수 있다. (컨테이너와 달리)
+#
+#   설치 (저장소 루에서):
+#     sudo cp scripts/api/myllm-api.service /etc/systemd/system/
+#     sudo sed -i -e "s|{{USER}}|$USER|" \
+#                 -e "s|{{SCRIPT_DIR}}|/절대경로/myllm|" \
+#                 /etc/systemd/system/myllm-api.service
+#     # (선택) 토큰 주입 — 아래 Environment= 주석 해제 후 값 입력
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable --now myllm-api
+#
+#   관리:
+#     systemctl status myllm-api
+#     journalctl -u myllm-api -f
+# ============================================================
+[Unit]
+Description=myLLM Script Runner API (port 18080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+# 서버에서 실행하므로 GPU 가 아닌 호스트의 bash/llama-server 경로 사용
+WorkingDirectory={{SCRIPT_DIR}}
+Environment=PYTHONPATH={{SCRIPT_DIR}}
+Environment=MYLLM_SCRIPTS_DIR={{SCRIPT_DIR}}/server/scripts
+# ── 보안: 이 라인의 주석을 풀고 토큰을 지정하면 모든 /v1 호출에 인증 필수
+# Environment=EXTERNAL_TOKEN=CHANGE_ME_STRONG_SECRET
+Environment=MYLLM_CMD_TIMEOUT=180
+Environment=PYTHON_RELOAD=0
+ExecStart=/usr/bin/env bash {{SCRIPT_DIR}}/scripts/api/run_local.sh 18080
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=30
+NoNewPrivileges=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
