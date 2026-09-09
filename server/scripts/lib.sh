@@ -56,7 +56,6 @@ source <(tr -d '\r' < "$f")
   CTX_SIZE="${CTX_SIZE:-16384}"
   NO_THINK="${NO_THINK:-0}"
   THREADS="${THREADS:-0}"
-  PARALLEL="${PARALLEL:-1}"
   BATCH="${BATCH:-512}"
   UBATCH="${UBATCH:-512}"
   KV_CACHE="${KV_CACHE:-}"

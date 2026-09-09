@@ -2,8 +2,8 @@
 #
 # 사용법
 #   docker compose -f docker-compose.yml up --build -d
-#   curl http://localhost:8000/health
-#   curl -X POST http://localhost:8000/v1/run \
+#   curl http://localhost:18080/health
+#   curl -X POST http://localhost:18080/v1/run \
 #        -H 'Content-Type: application/json' \
 #        -d '{"action":"status"}'
 #
@@ -20,7 +20,7 @@ services:
     image: myllm-script-runner:latest
     container_name: myllm-script-runner
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_PORT:-18080}:18080"
     volumes:
       # API 가 server/scripts/*.sh 를 실행할 수 있도록 저장소를 마운트
       - ./server/scripts:/myllm/server/scripts:ro
@@ -32,7 +32,7 @@ services:
       - MYLLM_SCRIPTS_DIR=/myllm/server/scripts
       - EXTERNAL_TOKEN=${EXTERNAL_TOKEN:-}
       - MYLLM_CMD_TIMEOUT=${MYLLM_CMD_TIMEOUT:-180}
-      - API_PORT=${API_PORT:-8000}
+      - API_PORT=${API_PORT:-18080}
     restart: unless-stopped
     # NOTE: read_only:true 는 제거한다 — 컨테이너가 /tmp 에 상태 파일을 쓰고
     #       server/run(마운트됨) 에 PID/로그를 기록해야 한다.

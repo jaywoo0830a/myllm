@@ -22,9 +22,9 @@ BASE = os.environ.get(
 )
 
 # 허용 가능한 모델 slug (config/models/<slug>.env 존재분 기준)
+# 병렬이 무의미한 CPU 환경이라 각 역할은 대표 인스턴스 1개만 가진다.
 ALLOWED_SLUGS = {
-    "parser", "worker1", "worker2", "worker3", "worker4",
-    "coder1", "coder2", "coder3", "coder4",
+    "parser", "worker1", "coder1",
     "reasoner", "setter", "judge",
 }
 

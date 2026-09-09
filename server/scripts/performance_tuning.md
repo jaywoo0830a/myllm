@@ -5,7 +5,7 @@
 >
 > 자원 배분 원칙은 **MODEL‑ANALYSIS.md §1** 을 따른다.
 > 디코딩은 메모리 대역폭 결합(M1) → 프로세스 수를 늘려도 총 처리량은 증가하지 않는다.
-> 즉, **상시는 역할별 대표 1개만 띄우고(--parallel 슬롯), 14B 는 단독 on‑demand** 로 운용.
+> 즉, **역할은 항상 대표 1개만 띄우고(병렬 없음), 14B 는 단독 on‑demand** 로 운용.
 
 ---
 
@@ -92,11 +92,10 @@ $$
 ## 6. Run (on‑demand 운영)
 
 ```bash
-# 상시: 역할별 대표 1개
+# 상시: 역할별 대표 1개 (병렬 인스턴스 없음)
 bash scripts/start_all.sh            # parser + worker1 + coder1
 
-# on‑demand: 필요한 역할 추가
-bash scripts/up.sh worker2           # 같은 GGUF → 되도록 --parallel 슬롯 활용 (M1)
+# on‑demand: 추론가(Reasoner) 필요 시
 bash scripts/up.sh reasoner
 
 # 14B 단독 (상호배타): setter 또는 judge 둘 중 하나만

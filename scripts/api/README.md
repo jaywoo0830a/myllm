@@ -28,7 +28,7 @@ myllm/
 docker compose -f docker-compose.yml up --build -d
 
 # 상태 확인
-curl http://localhost:8000/health
+curl http://localhost:18080/health
 ```
 
 필요 시 `.env` 또는 환경변수로 토큰 설정:
@@ -63,28 +63,28 @@ docker compose -f docker-compose.yml up -d
 ```
 
 - `action`: `up` · `down` · `start_all` · `start_heavy` · `status` · `restart` · `log`
-- `arg`: 모델 slug (`parser, worker1~4, coder1~4, reasoner, setter, judge`) — `action`이 인자 요구 시에만
+- `arg`: 모델 slug (`parser, worker1, coder1, reasoner, setter, judge`) — `action`이 인자 요구 시에만
 
 예:
 
 ```bash
 # 상태 리포트 생성(조회)
-curl -X POST http://localhost:8000/v1/run \
+curl -X POST http://localhost:18080/v1/run \
   -H 'Content-Type: application/json' \
   -d '{"action":"status"}'
 
 # 모델 서버 시작
-curl -X POST http://localhost:8000/v1/run \
+curl -X POST http://localhost:18080/v1/run \
   -H 'Content-Type: application/json' \
   -d '{"action":"up","arg":"parser"}'
 
 # 14B 단독(on-demand, 상호배타)
-curl -X POST http://localhost:8000/v1/run \
+curl -X POST http://localhost:18080/v1/run \
   -H 'Content-Type: application/json' \
   -d '{"action":"start_heavy","arg":"setter"}'
 
 # 인증 토큰이 설정된 경우
-curl -X POST http://localhost:8000/v1/run \
+curl -X POST http://localhost:18080/v1/run \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer my-secret' \
   -d '{"action":"status"}'
@@ -137,7 +137,7 @@ curl -X POST http://localhost:8000/v1/run \
 
 ```bash
 cd /path/to/myllm
-PYTHONPATH=. EXTERNAL_TOKEN=... uvicorn scripts.api.app:app --host 0.0.0.0 --port 8000
+PYTHONPATH=. EXTERNAL_TOKEN=... uvicorn scripts.api.app:app --host 0.0.0.0 --port 18080
 ```
 
 이렇게 하면 컨테이너가 아니라 **호스트 프로세스**가 되어 up/down 이 실제 PID/로그를 관리합니다.

@@ -70,7 +70,7 @@ detect_mem() {
 }
 
 # ---- 모델 목록 + 헬퍼 -------------------------------------------------------
-declare -a SLUGS=( parser worker1 worker2 worker3 worker4 coder1 coder2 coder3 coder4 reasoner setter judge )
+declare -a SLUGS=( parser worker1 coder1 reasoner setter judge )
 
 role_of() {
   case "$1" in
@@ -92,7 +92,7 @@ running_opts() {
   pid="$(cat "$pidfile")"
   if [[ -r "/proc/$pid/cmdline" ]]; then
     tr '\0' ' ' < "/proc/$pid/cmdline" | sed 's/--/\n    --/g' \
-      | grep -E -- '--parallel|--ctx-size|--cache-type|-b |-ub |--alias|-t ' | tr '\n' ' '
+      | grep -E -- '--ctx-size|--cache-type|-b |-ub |--alias|-t ' | tr '\n' ' '
   else
     echo "remote(pid=$pid)"
   fi
@@ -156,7 +156,7 @@ running_opts() {
   echo "| 구분 | 권장 상주 | 실행 |"
   echo "|---|---|---|"
   echo "| 상시 | parser + worker1 + coder1 (≈15GB) | \`bash scripts/start_all.sh\` |"
-  echo "| on-demand | worker2~4, coder2~4, reasoner | \`bash scripts/up.sh <slug>\` |"
+  echo "| on-demand | reasoner (추론) | \`bash scripts/up.sh reasoner\` |"
   echo "| 14B 상호배타 | setter ↔ judge (둘 중 하나만) | \`bash scripts/start_heavy.sh setter\\|judge\` |"
   echo
   echo "> 현재 떠 있는(▲) 모델이 위 권장과 다르면 불필요한 인스턴스를 내리세요:"
@@ -170,16 +170,15 @@ running_opts() {
 **핵심 원리 (수학: `MODEL-ANALYSIS.md` §1)**
 - 디코딩(토큰 생성)은 **메모리 대역폭 결합**입니다. 프로세스를 병렬로 늘려도 총 처리량은
   늘지 않고 RAM·스레드만 낭비되어 오히려 느려집니다.
-- 그래서 **"상시 = 역할별 대표 1개씩만, 14B = 둘 중 하나만(단독)"** 이 원칙입니다.
+- 그래서 **"역할은 항상 대표 1개씩, 14B 는 둘 중 하나만(단독)"** 이 원칙입니다.
 
 **역할별 로드 가이드**
 | 목적 | 실행 |
 |---|---|
-| 요약/검색/분배 | `bash scripts/start_all.sh` (parser+worker1+coder1) |
-| 추가 일꾼(요약 병렬) | `bash scripts/up.sh worker2` |
-| 코드 작성/리뷰/픽스 | 상시 coder1 (필요시 worker2~4 처럼 up.sh) |
-| 딥추론/증명(긴 출력) | `bash scripts/up.sh reasoner` (최대 2000tok → CPU 에선 수 분) |
+| 요약/검색/분배 | `bash scripts/start_all.sh` (parser + worker1 + coder1) |
+| 딥추론/증명(긴 출력) | `bash scripts/up.sh reasoner` (2000tok → CPU 에선 수 분) |
 | 문제 생성(14B) | `bash scripts/start_heavy.sh setter` (독점) |
+| 검증(14B, GBNF) | `bash scripts/start_heavy.sh judge` (setter 와 배타) |
 | 검증(14B, GBNF) | `bash scripts/start_heavy.sh judge` (setter 와 배타) |
 
 **속도 가이드 (CPU 9700X)**

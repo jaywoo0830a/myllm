@@ -108,5 +108,5 @@ def run_action(req: RunRequest, authorization: str | None = Header(default=None)
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.environ.get("API_PORT", "8000"))
+    port = int(os.environ.get("API_PORT", "18080"))
     uvicorn.run("scripts.api.app:app", host="0.0.0.0", port=port, reload=False)

@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 COPY scripts/api /myllm/scripts/api
 
 ENV PYTHONPATH=/myllm
-EXPOSE 8000
+EXPOSE 18080
 
 # 컨테이너 시작 시 uvicorn 기동
-CMD ["uvicorn", "scripts.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "scripts.api.app:app", "--host", "0.0.0.0", "--port", "18080"]

@@ -36,7 +36,8 @@ $$
 
 1개 모델이 8 tok/s면 **동시 4개 서버는 각각 ~2 tok/s**로 총량은 그대로다.
 → 동시 프로세스 수를 늘려도 총 처리량은 늘지 않고 **레이턴시와 메모리만 는다.**
-따라서 여러 인스턴스를 프로세스로 띄우는 대신 **한 프로세스의 `--parallel N` 슬롯**으로 멀티플렉싱해야 한다.
+**결론: 병렬(프로세스 수 늘리기, `--parallel N`)은 CPU 에서 무의미하므로 사용하지 않는다.**
+→ 역할은 항상 **대표 1개 인스턴스**만 두고 요청은 순차 처리한다.
 
 ### 1.2 프리필은 연산 결합 문제 (M2)
 
@@ -100,15 +101,16 @@ $$
 
 | 프로세스 | GGUF | resident | threads | 역할 |
 |---|---|---|---|---|
-| A | Qwen2.5-7B-Instruct + `--parallel 4` | ~6 GB | 8 | parser + worker×4 |
-| B | Qwen2.5-Coder-7B + `--parallel 2` | ~6 GB | 8 | coder×4 |
-| C | DeepSeek-R1-7B (on-demand) | ~6 GB | 8 | reasoner |
-| D | 14B Setter (D/E 상호배타) | ~12 GB | 8 | problem set |
-| E | 14B Judge (D/E 상호배타) | ~12 GB | 8 | verify |
-| F | bge-small (in-process) | ~1 GB | – | embedding |
+| A | Qwen2.5-7B-Instruct | ~6 GB | 8 | parser |
+| B | Qwen2.5-7B-Instruct | ~6 GB | 8 | worker1 |
+| C | Qwen2.5-Coder-7B | ~6 GB | 8 | coder1 |
+| D | DeepSeek-R1-7B (on-demand) | ~6 GB | 8 | reasoner |
+| E | 14B Setter (E/F 상호배타) | ~12 GB | 8 | problem set |
+| F | 14B Judge (E/F 상호배타) | ~12 GB | 8 | verify |
+| G | bge-small (in-process) | ~1 GB | – | embedding |
 
-피크 동시 상주 ≈ $6+6+1+12 \approx 25\,\text{GB}$
-→ **64GB의 절반도 사용하지 않는다.** 토큰 레이트: 7B ≈ 7–9 tok/s, 14B ≈ 4–5 tok/s (물리적 상한).
+피크 동시 상주 ≈ $6+6+6+1+12 \approx 31\,\text{GB}$
+→ **64GB 의 절반 이하.** 토큰 레이트: 7B ≈ 7–9 tok/s, 14B ≈ 4–5 tok/s (물리적 상한).
 
 ---
 
@@ -134,7 +136,6 @@ $$
 | 설정(예시 env) | 예상 명령줄 | 실제 반영 |
 |---|---|---|
 | `KV_CACHE=q8_0` | `--cache-type k:q8_0,v:q8_0` | **미전달 → 무시** |
-| `PARALLEL=1` | `--parallel N` | **미전달 → 무시** |
 | `BATCH/UBATCH` | `-b/-ub` | **미전달 → 무시** |
 | `NO_THINK` | – | **미전달 → 무시** |
 
@@ -194,7 +195,7 @@ $$
 | 우선순위 | 조치 | 작업 위치 |
 |---|---|---|
 | P0 | `start_all.sh` on-demand 2–3개만 로드, setter/judge 상호배타 | `start_all.sh` + 오케스트레이터 |
-| P0 | `--parallel`, `--cache-type k:q8_0,v:q8_0`, batch 전달 → GGUF당 1프로세스로 통폐합 | `llama_serve_generic.sh` + env |
+| P0 | `--cache-type k:q8_0,v:q8_0`, batch 전달 반영 | `llama_serve_generic.sh` + env |
 | P1 | 스레드 합 ≤ 16, 역할별 CTX 차등화 | 각 model env |
 | P1 | PLAN 시간 지표를 실측(프리필 포함)으로 교정 | PLAN.md |
 | P2 | `performance_tuning.md` Zen5/native + 현재 모델 기준 갱신, mistral 제거 | doc + 서버 파일 |

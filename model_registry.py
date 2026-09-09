@@ -19,7 +19,7 @@ MODEL_REGISTRY = {
         "quant": "Q4_K_M",
         "size_gb": 5,
         "role": "논리 일꾼",
-        "instances": 4,  # up to 4 workers as needed
+        "instances": 1,  # 병렬은 CPU(대역폭 결합)에서 무의미 → 대표 1개만
     },
     "coder": {
         "slug": "coder",
@@ -27,7 +27,7 @@ MODEL_REGISTRY = {
         "quant": "Q4_K_M",
         "size_gb": 5,
         "role": "코딩 일꾼",
-        "instances": 4,
+        "instances": 1,  # 병렬은 CPU(대역폭 결합)에서 무의미 → 대표 1개만
     },
     "reasoner": {
         "slug": "reasoner",
