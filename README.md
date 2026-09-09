@@ -19,16 +19,28 @@ The server now ships **environment files** for each model under `server/config/m
 bash server/scripts/up.sh parser
 ```
 
-To start **all** models at once (useful for development), run:
+To start the **persistent (always-on) set** — the minimum needed for day-to-day work — run:
 
 ```bash
-bash server/scripts/start_all.sh
+bash server/scripts/start_all.sh     # parser + worker1 + coder1 (on-demand 운영)
 ```
 
+Heavy 14B models (Setter / Judge) are **mutually exclusive on-demand** — only one loads at a time:
+
+```bash
+bash server/scripts/start_heavy.sh setter   # or: judge
+```
+
+> Resource rationale (CPU-only 9700X, DDR5 64GB): decoding is **memory-bandwidth bound**,
+> so running many duplicate servers does not increase total throughput — it only wastes RAM
+> and threads. See `MODEL-ANALYSIS.md` for the full quantitative model.
+
 ## New Files
+- `MODEL-ANALYSIS.md` – CPU-only resource model (memory-bandwidth bound decoding) + gap analysis.
 - `model_registry.py` – Python dictionary describing the model registry (useful for orchestration code).
 - `server/config/models/*.env` – Environment files for each model instance (parser, workers, coders, reasoner).
-- `server/scripts/start_all.sh` – Convenience script to launch all defined models.
+- `server/scripts/start_all.sh` – Start the always-on set (parser + worker1 + coder1).
+- `server/scripts/start_heavy.sh` – Start a 14B model (setter|judge) with mutual exclusion.
 
 ## How It Works
 1. **Base environment** (`server/config/env`) defines shared variables (MODEL_DIR, LLAMA_CPP_DIR, etc.).

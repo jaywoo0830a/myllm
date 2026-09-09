@@ -17,16 +17,12 @@ cp config/env.example config/env
 # Example for the parser model:
 cp config/models/parser.env.example config/models/parser.env
 # Build llama‑cpp server
-bash scripts/setup_llamacpp.sh          # builds with -march=znver3 and AVX‑512
+bash scripts/setup_llamacpp.sh          # builds with -march=native(Zen5) and AVX‑512
 # Download the model GGUF files (replace <model> with the slug, e.g., parser)
 bash scripts/download.sh parser
-# NOTE: For the `reasoner` model (DeepSeek‑R1‑Distill‑Qwen‑7B) HuggingFace does NOT provide a GGUF file.
-# You must either:
-#   • Convert the provided safetensors checkpoint to GGUF yourself (see README for conversion steps), or
-#   • Replace `reasoner` with another model that already ships a GGUF (e.g., DeepSeek‑V2‑Chat).
-# After conversion, place the resulting .gguf file in $HOME/models/ and run:
-#   bash server/scripts/download.sh reasoner   # (will skip download because file already exists)
-#   bash server/scripts/up.sh reasoner
+# NOTE: reasoner(DeepSeek‑R1‑Distill‑Qwen‑7B) 는 unsloth/DeepSeek‑R1‑Distill‑Qwen‑7B‑GGUF
+#       에서 GGUF 를 받을 수 있다 (env 의 HF_REPO 참조).
+bash scripts/up.sh reasoner
 # Start the model server
 bash scripts/up.sh parser
 ```
