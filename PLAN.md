@@ -12,18 +12,22 @@
 | 역할 | 모델 | 파라미터 | 메모리(예상) | 출력 토큰 상한 | 출력 형식 |
 |------|------|----------|--------------|----------------|-----------|
 | **파서 (Parser)** | Qwen2.5-7B-Instruct (Q4_K_M) | 7B | ~5GB | `max_tokens=200` | JSON 스키마 강제 |
-| **워커 (Worker)** × 4 | Qwen2.5-7B-Instruct (Q4_K_M) | 7B | 각 ~5GB | `max_tokens=500` | JSON (summary, source) |
-| **코더 (Coder)** × 4 | Qwen2.5-Coder-7B-Instruct (Q4_K_M) | 7B | 각 ~5GB | `max_tokens=1200` | JSON + 코드 블록 |
+| **워커 (Worker)** | Qwen2.5-7B-Instruct (Q4_K_M) | 7B | ~5GB | `max_tokens=500` | JSON (summary, source) |
+| **코더 (Coder)** | Qwen2.5-Coder-7B-Instruct (Q4_K_M) | 7B | ~5GB | `max_tokens=1200` | JSON + 코드 블록 |
 | **문제 생성기 (Setter)** | Qwen2.5-14B-Instruct (Q5_K_M) | 14B | ~11GB | `max_tokens=1800` | 구조화된 문제 + Sympy 코드 |
 | **판사 (Judge)** | DeepSeek-R1-Distill-Qwen-14B (Q5_K_M) | 14B | ~11GB | `max_tokens=20` | `{ok, code}` 초경량 JSON |
 | **추론가 (Reasoner)** | DeepSeek-R1-Distill-Qwen-7B (Q4_K_M) | 7B | ~5GB | `max_tokens=2000` (증명은 자유 텍스트) | 최종 결론은 `{result: ...}` |
 | **임베더 (Embedder)** | bge-small-en-v1.5 | 0.1B | ~0.5GB | 출력 없음 | 벡터만 반환 |
 
-**동시 로딩 전략:**
-- **평상시:** Parser(7B) 1 + Worker(7B) 2 → 약 15GB
-- **문제 생성 시:** Setter(14B) 1 → 약 11GB (다른 모델 내리고 단독 사용)
-- **검증 시:** Judge(14B) 1 → 약 11GB (단독 사용)
-- **딥 다이브 시:** Reasoner(7B) 1 + Coder(7B) 2 → 약 15GB
+> **실제 인스턴스 수(P2 ・ CPU 원칙):** CPU(메모리 대역폭 결합, `MODEL-ANALYSIS.md` §1)에서는
+> 병렬 인스턴스를 늘려도 총 처리량이 늘지 않는다. 따라서 역할마다 **대표 1개(worker1, coder1)** 만
+> 두고, 워커/코더의 `2~4` 인스턴스는 만들지 않는다. (잔재 `*.env.example` 은 삭제됨)
+
+**동시 로딩 전략 (역할 1개씩 · 14B 는 단독):**
+- **상시(평상시):** Parser + Worker1 + Coder1 → 약 15GB  (`bash server/scripts/start_all.sh`)
+- **on-demand(딥 추론):** Reasoner 1 → 약 5GB  (`bash server/scripts/up.sh reasoner`)
+- **문제 생성 시:** Setter(14B) 1 → 약 11GB (다른 14B 와 배타)  (`bash server/scripts/start_heavy.sh setter`)
+- **검증 시:** Judge(14B) 1 → 약 11GB (Setter 와 배타)  (`bash server/scripts/start_heavy.sh judge`)
 
 이렇게 하면 **14B 모델 2개를 동시에 띄우지 않아도** 되므로 메모리 압박 없이 운용할 수 있습니다.
 
@@ -113,13 +117,13 @@ judge_light: >
 
 ## 4. 이 배치의 기대 효과
 
-| 항목 | 기존 | 개선 후 |
+| 항목 | 기존/경우 | 개선 후 |
 |------|------|---------|
-| 판사 출력 토큰 | 200~300 | **10 이하** |
-| 판사 응답 시간 | 5~10초 | **1초 이내** |
+| 판사 출력 토큰 | 200~300 | **10 이하** (GBNF 로 강제) |
+| 판사 응답 시간 | 5~10초 | **출력은 1초 이내 단, 입력 프리필 포함 총 5–10초**(현실적 SLA) |
 | Setter 정확도 | 7B 한계 | **14B로 향상** |
-| 병렬 처리 부하 | 10개 모델 상시 로드 | **필요할 때만 로드** |
-| 메모리 여유 | 30GB+ | **40GB+ 여유** |
+| 병렬 처리 부하 | 9개 모델 상시 로드 | **상시 3개 + on-demand**(역할당 대표 1개) |
+| 메모리 상주 | ~54GB(스왑 직전) | **상시 약 15GB** → 64GB 기준 큰 여유 |
 
 ---
 
@@ -140,14 +144,22 @@ curl http://localhost:11434/api/chat -d '{
 }'
 ```
 
-### 5.2 llama.cpp 사용 시
+### 5.2 llama.cpp (이 저장소 실제 운영 방식) 사용 시
+
+실제로는 `server/scripts/up.sh`(단일) / `start_all.sh`(상시 세트) / `start_heavy.sh`(14B 단독) 가
+아래 인자를 구성해 호출한다. 직접 실행하려면:
+
 ```bash
-# 서버 실행 (판사용)
-./llama-server -m deepseek-r1-14b-q5_k_m.gguf \
-  --threads 16 --ctx-size 2048 --mlock \
+# 예: 판사(Judge/14B) 직접 기동 — KV 캐시는 q8_0 으로 양자화
+./llama-server -m deepseek-r1-distill-qwen-14b-q5_k_m.gguf \
+  -t 8 --ctx-size 8192 \
+  --cache-type-k q8_0 --cache-type-v q8_0 \
   --grammar-file judge.gbnf \
-  --port 8082
+  --port 8092
 ```
+
+> **참고:** llama.cpp build 10858+ 는 옛 통합 `--cache-type "k:...,v:..."` 플래그가 제거되어,
+> **`--cache-type-k`/`--cache-type-v` 를 각각** 넘겨야 한다. 값은 `f32,f16,bf16,q8_0,q4_0,...` 중 선택.
 
 ---
 
@@ -157,6 +169,12 @@ curl http://localhost:11434/api/chat -d '{
 - 14B 모델은 논리적 일관성 검사만 수행하고 출력 토큰을 10개 이하로 유지  
 - 7B 모델은 실질적인 콘텐츠 생성(문제, 코드, 요약)을 담당하되, 엄격한 출력 형식과 프롬프트로 품질 보정  
 
-이렇게 하면 **CPU 환경에서도 1~2초 내 검증, 30초 내 문제 생성**이 가능하며, 정확도는 14B의 논리력으로 보장됩니다.
+이렇게 하면 **CPU 환경에서도 검증은 입력 프리필 포함 5–10초, 문제 생성은 30초 전후**가 현실적이며,
+정확도는 14B의 논리력으로 보장됩니다.
 
-원하시면 이 배치를 적용한 **`config.yaml` 전체 수정본**이나, **FastAPI 오케스트레이터 코드 예시**를 제공해 드리겠습니다.
+> **참고(이미 이행됨):** 위 설계는 `server/scripts/` 에 반영되어 있습니다.
+> - 역할당 대표 1개 상시: `start_all.sh` (parser + worker1 + coder1)
+> - on-demand: `up.sh reasoner`
+> - 14B 상호배타: `start_heavy.sh setter|judge`
+> - KV 캐시 양자화: `llama_serve_generic.sh` 가 `--cache-type-k/-v` 로 반영
+> - 상태 스냅샷: `status_report.sh` → `STATUS.md`

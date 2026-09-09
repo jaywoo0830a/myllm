@@ -1,6 +1,6 @@
 # STATUS — 현재 모델 운용 현황
 
-> 생성: 2026-09-09 15:22:29 KST  ·  호스트: DESKTOP-S0008G0
+> 생성: 2026-09-09 17:33:05 KST  ·  호스트: DESKTOP-S0008G0
 > (이 서버에서 실행 시 실제 프로세스/메모리 기준, `--remote` 면 저장소 기준)
 
 ## 1. 시스템 요약
@@ -8,7 +8,7 @@
 | 항목 | 값 |
 |---|---|
 | CPU | AMD Ryzen 7 260 w/ Radeon 780M Graphics  (cores=16, threads=16) |
-| RAM | total=15.3 GB, used=3.6 GB, avail=11.7 GB |
+| RAM | total=15.3 GB, used=3.4 GB, avail=11.8 GB |
 | 스왑 | - |
 | 설계 기준(ideal) | 9700X(8C/16T) · DDR5 64GB · CPU-only |
 
@@ -52,7 +52,6 @@
 | 요약/검색/분배 | `bash scripts/start_all.sh` (parser + worker1 + coder1) |
 | 딥추론/증명(긴 출력) | `bash scripts/up.sh reasoner` (2000tok → CPU 에선 수 분) |
 | 문제 생성(14B) | `bash scripts/start_heavy.sh setter` (독점) |
-| 검증(14B, GBNF) | `bash scripts/start_heavy.sh judge` (setter 와 배타) |
 | 검증(14B, GBNF) | `bash scripts/start_heavy.sh judge` (setter 와 배타) |
 
 **속도 가이드 (CPU 9700X)**

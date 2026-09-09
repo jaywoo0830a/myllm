@@ -2,8 +2,12 @@
 
 > 타깃 하드웨어: **AMD Ryzen 9 9700X (8코어/16스레드, Zen5) · DDR5 64GB · CPU-only**
 >
-> 이 문서는 현재 myLLM 리포의 다중-모델 배치(PLAN.md / `server/scripts/*`)를 이상적 자원 배분 모델과 대조해
-> *어디가 어떤 문제*인지를 **숫자로** 설명한다. 모든 수식은 KaTeX 문법이며 `README`에서 표시 가능하다.
+> 이 문서는 myLLM 리포의 다중-모델 배치(PLAN.md / `server/scripts/*`)를 이상적 자원 배분 모델과 대조해
+> **왜 "역할당 대표 1개 + 14B 단독" 이어야 하는지**를 숫자로 설명한다.
+> 모든 수식은 KaTeX 문법이며 `README`에서 표시 가능하다.
+>
+> **문서 성격:** §1 이 이상적 수학 모델, §2 가 과거 문제점 → 조치 → 이행 상태 이력, §3 이 현재 재고와
+> 남은 작업. 과거 삭제된 잔재(worker2~4, mistral 등)는 §2 의 해결 기록으로만 남는다.
 
 ---
 
@@ -114,88 +118,98 @@ $$
 
 ---
 
-## 2. 이상적 모델 대비 현재 시스템 문제점 (파일·라인 단위)
+## 2. 문제점 → 조치 → 이행 상태 (이력)
 
-### 🔴 P1. `server/scripts/start_all.sh:13-25` — on-demand 원칙 위반 (최심각)
+과거 리포가 이상적 모델에서 어긋나던 지점들과, 그것이 어떻게 해결됐는지/남아 있는지를 기록한다.
+상태: ✅ 해결 ・ 🟡 부분/잔여 ・ ⬜ 미해결
 
-parser + worker1~4 + coder1~4 + reasoner **총 9개 동시 로드**:
+### ✅ P1. `start_all.sh` — 9중 동시 로드 → "역할당 대표 1개"
 
-$$
-\text{메모리}:\; 9\times6\,\text{GB}\approx 54\,\text{GB}
-\qquad
-\text{스레드}:\; 9\times8 = 72 \;\gg\; 16
-$$
+**과거:** parser + worker1~4 + coder1~4 + reasoner **총 9개 동시 로드**:
 
-- PLAN의 "40GB+ 여유"를 정면 위반하고 **OOM/스왑 직전** 수치.
-- 72개 스레드를 16개에 과잉 할당 → 컨텍스트 스위칭 폭증으로 오히려 저하.
+$$\text{메모리}:\; 9\times6\,\text{GB}\approx 54\,\text{GB}\qquad
+\text{스레드}:\; 9\times8 = 72 \;\gg\; 16$$
 
-### 🔴 P2. `server/scripts/llama_serve_generic.sh:34-40` — 튜닝 플래그 미적용
+- PLAN의 "40GB+ 여유" 정면 위반, OOM/스왑 직전 수치였고 스레드 72개 과잉 할당으로 오히려 저하.
 
-`exec llama-server`에 전달되는 플래그는 `-m, --alias, --host, --port, --ctx-size, -t`뿐:
+**조치:** worker2~4 · coder2~4 의 env 예제 **삭제** + `start_all.sh` 를 **parser + worker1 + coder1 만** 로드로 교체.
+reasoner 는 `up.sh reasoner`, 14B(setter/judge) 는 `start_heavy.sh` 로 on-demand 상호배타.
+→ **이행 완료** (피크 상시 상주 ≈ 15GB).
 
-| 설정(예시 env) | 예상 명령줄 | 실제 반영 |
-|---|---|---|
-| `KV_CACHE=q8_0` | `--cache-type k:q8_0,v:q8_0` | **미전달 → 무시** |
-| `BATCH/UBATCH` | `-b/-ub` | **미전달 → 무시** |
-| `NO_THINK` | – | **미전달 → 무시** |
+### ✅ P2. `llama_serve_generic.sh` — 튜닝 플래그 미적용 → 반영
 
-→ 14B 판사의 KV는 계획 추정(1.5GB) 대비 **2배(~3GB)**.
-→ "워커 4개"가 실상 **각자 GGUF 4.7GB를 중복 로드**하는 4개 독립 프로세스(총 ~24GB 낭비).
+**과거:** `exec llama-server`에 `-m, --alias, --host, --port, --ctx-size, -t`만 전달되어
+`KV_CACHE`, `BATCH/UBATCH` 가 **미전달 → 무시**됨 (판사 KV 가 계획의 2배, 워커 4개가 각자 4.7GB 중복 로드).
 
-### 🟠 P3. 모델별 균일 `CTX_SIZE=16384` → KV 낭비
+**조치:** `-b/-ub(배치)`, KV 캐시 양자화 플래그를 명령줄에 반영.
+- llama.cpp build 10858+ 는 옛 통합 `--cache-type "k:...,v:..."` 제거 → **`--cache-type-k`/`--cache-type-v` 분리 플래그** 사용.
+- `KV_CACHE` 가 비면 양자화 생략(기본 f16) 하도록 방어.
+- `MODEL_SLUG` 없이 직접 실행 시 사용법 안내 후 종료(가드) 추가.
+→ **이행 완료**.
 
-판사(GBNF, 20토큰 이내)는 16K가 불필요. 역할별 비대칭 컨텍스트:
+### 🟡 P3. 모델별 균일 `CTX_SIZE` → 역할별 비대칭화
 
-$$
-R_r \propto \text{ctx}_r
-\qquad
-\Rightarrow\quad \text{작은 판사/파서 } \text{ctx} \downarrow,\ \text{큰 세터/리즈너 } \text{ctx} \uparrow
-$$
+파서/판사는 출력이 극히 짧으므로 컨텍스트를 줄여 KV 를 절약한다.
 
-### 🟠 P4. 출력 토큰 예산 vs CPU 속도의 시간 수학 위반
+$$R_r \propto \text{ctx}_r \;\Rightarrow\;
+\text{작은 판사/파서 }\text{ctx}\downarrow,\ \text{큰 세터/리즈너 }\text{ctx}\uparrow$$
 
-Reasoner `max_tokens=2000` (PLAN:19):
+**현재:** `parser.env` 는 8192 로 이미 축소. judge/setter/reasoner 는 각 env 에서 더 세밀 조정 가능.
+→ **부분 이행** (역할별 컨텍스트 조정은 env 로 열려 있음).
 
-$$
-t_{\text{reasoner}} \approx \frac{2000}{7\text{–}9} \approx 220\text{–}290\ \text{초} \;(4\text{–}5분)
-$$
+### ✅ P4. 출력 토큰 예산 vs CPU 속도의 시간 수학 → 문서화
 
-PLAN의 "30초 내 생성/판사 1초"(PLAN:119,160)와 **수학적으로 모순**. 판사 1초는 입력 프리필(8–15초) 때문에 불가능 — 실제적 SLA는 **5–10초**.
+Reasoner `max_tokens=2000`:
 
-### 🟡 P5. `performance_tuning.md` — 아키텍처·타깃 모델 오류
+$$t_{\text{reasoner}} \approx \frac{2000}{7\text{–}9} \approx 220\text{–}290\ \text{초} \;(4\text{–}5분)$$
 
-- 9700X를 "**Zen 3**"으로, 타깃을 **Mistral-Small-24B**로 기술 → 실제는 **Zen 5** + 7B/14B 파이프라인.
-- 빌드 플래그는 $-\text{march=}\text{znver3}$ 보다 $-\text{march=}\text{native}$ (Zen5 AVX‑512) 가 적합.
+판사는 출력만 보면 1초이지만 **입력 프리필 때문에 총 5–10초**가 현실적 SLA.
+→ PLAN.md/STATUS.md 의 시간 지표를 **실측 기반(프리필 포함)**으로 교정 완료.
 
-### 🟡 P6. 잔재·명칭 드리프트
+### ✅ P5. `performance_tuning.md` — Zen5 / 7B·14B 파이프라인 교정
 
-- `server/config/models/mistral-large.env(.example)`, `llama_serve_mistral.sh` — 삭제된 24B 잔재.
-- `contract.yml`은 `generator/retriever/embedder` vs PLAN의 `worker/coder/judge/setter` — API 명세 불일치.
-- reasoner: `server/README.md:23`은 "HF에 GGUF 없음"이라 서술하는데 env는 `unsloth/...GGUF`를 가리킴.
+**과거:** 9700X 를 "Zen 3"로, 타깃을 "Mistral-Small-24B"로 기술.
+**조치:** `-march=native`(Zen5 AVX‑512) + Qwen2.5-7B/14B·DeepSeek-R1-Distill 파이프라인 기준으로 전면 갱신.
+→ **이행 완료**.
 
-### 🟡 P7. 임베딩·RAG가 미구현 (contract만 존재)
+### ✅ P6. 잔재·명칭 드리프트 제거
+
+- `mistral-large.env(.example)`, `llama_serve_mistral.sh` → **삭제**.
+- worker2~4 / coder2~4 `.env.example` → **삭제**.
+- (잔여 참고) `contract.yml` 의 `generator/retriever/embedder` vs PLAN 의 `worker/coder/judge/setter` 는
+  API 명세 단계의 명칭 차이로, 오케스트레이터 구현 시 맞춰야 할 항목.
+
+### ⬜ P7. 임베딩·RAG 미구현 (contract 만 존재)
 
 `/embed,/retrieve,/generate`(contract.yml)·`embedding` 슬러그(model_registry.py)는 **구현 전**.
-bge-small은 llama.cpp보다 Python(sentence-transformers) 상주가 적합.
+bge-small 은 llama.cpp 보다 Python(sentence-transformers) 상주가 적합.
+→ **남은 작업** (README top-level 의 "Next Steps" 참조).
 
 ---
 
-## 3. 결론: 가장 중요한 두 가지
+
+## 3. 결론: 핵심 원리 + 현재 재고
 
 $$
 \boxed{%
 \begin{gathered}
-\text{① 디코딩은 대역폭 결합} \;\Rightarrow\; \text{최적점 = "동시 GGUF 종류 수"}\\
-\text{② 현재는 역행: 9중 로드 + 튜닝 플래그 미적용} \;\Rightarrow\; \text{메모리 2–3배 낭비, 스레드 과잉}
+\text{① 디코딩은 대역폭 결합} \;\Rightarrow\; \text{최적점 = "동시 GGUF 종류 수"}\\\n\text{② 최적 배치는 이미 이행됨: 역할당 1개 상시 + 14B 단독 + KV q8_0}
 \end{gathered}}
 $$
 
-**수정 우선순위**
+**현재 상태 요약 (도표)**
 
-| 우선순위 | 조치 | 작업 위치 |
+| 영역 | 상태 | 비고 |
 |---|---|---|
-| P0 | `start_all.sh` on-demand 2–3개만 로드, setter/judge 상호배타 | `start_all.sh` + 오케스트레이터 |
-| P0 | `--cache-type k:q8_0,v:q8_0`, batch 전달 반영 | `llama_serve_generic.sh` + env |
-| P1 | 스레드 합 ≤ 16, 역할별 CTX 차등화 | 각 model env |
-| P1 | PLAN 시간 지표를 실측(프리필 포함)으로 교정 | PLAN.md |
-| P2 | `performance_tuning.md` Zen5/native + 현재 모델 기준 갱신, mistral 제거 | doc + 서버 파일 |
+| 배치 로드 (`start_all.sh`) | ✅ | parser+worker1+coder1 상시, reasoner/14B on-demand |
+| 튜닝 플래그 (`llama_serve_generic.sh`) | ✅ | `-b/-ub`, `--cache-type-k/-v` 반영, 가드 추가 |
+| 문서 (PLAN/README/performance) | ✅ | Zen5·7B/14B·새 플래그명 기준 |
+| 잔재 제거 (mistral, worker2~4) | ✅ | 삭제 완료 |
+| 역할별 CTX 세밀화 (judge/setter/reasoner env) | 🟡 | env 로 조정 가능, 필요 시 추가 |
+| 임베딩·RAG (contract 전용) | ⬜ | 오케스트레이터/임베더 구현 필요 (Next Steps) |
+| Script Runner API (`scripts/api`) | ✅ | worker 슬러그 제어용 FastAPI 추가 (포트 18080) |
+
+**남은 작업 (우선순위)**
+1. **오케스트레이터 + RAG** — `/run-plans` 류 파이프라인 및 `/embed,/retrieve` 구현. (P7)
+2. **역할별 CTX/KV 미세 조정** — judge/setter/reasoner env 에서 실제 서비스 톤에 맞춰 확정. (P3)
+3. **명칭 정렬** — contract.yml(parser/embedder/retriever/generator) 과 오케스트레이터 역할명 통일. (P6 잔여)

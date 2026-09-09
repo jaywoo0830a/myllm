@@ -179,7 +179,6 @@ running_opts() {
 | 딥추론/증명(긴 출력) | `bash scripts/up.sh reasoner` (2000tok → CPU 에선 수 분) |
 | 문제 생성(14B) | `bash scripts/start_heavy.sh setter` (독점) |
 | 검증(14B, GBNF) | `bash scripts/start_heavy.sh judge` (setter 와 배타) |
-| 검증(14B, GBNF) | `bash scripts/start_heavy.sh judge` (setter 와 배타) |
 
 **속도 가이드 (CPU 9700X)**
 - 7B(Q4): **~7–9 tok/s** · 14B(Q5): **~4–5 tok/s**
