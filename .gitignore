@@ -18,3 +18,13 @@ run/
 *.log
 *.pid
 
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Docker (실행 산출물은 커밋하지 않음 — 소스만)
+*.egg-info/
+.pytest_cache/
+
